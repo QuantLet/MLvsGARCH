@@ -1,0 +1,12 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+.idea
+MLvsGARCHml/.ipynb_checkpoints/*
+MLvsGARCHcomp/.ipynb_checkpoints/*
+
+MLvsGARCHecon/.Rproj.user/*
+MLvsGARCHecon/.RData
+MLvsGARCHecon/.Rhistory
+

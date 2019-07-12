@@ -1,0 +1,33 @@
+{
+  "data_param": {
+    "data_path": "../data/btc_1H_20160101_20190101.csv",
+    "n_classes": 3,
+    "features": [
+      "ROCP_1"
+    ],
+    "normalization": {
+      "mean": 0,
+      "sigma": null,
+      "n_ma": 1000
+    }
+  },
+  "label_param": {
+    "lowerBand": -0.014,
+    "upperBand": 0.014,
+    "lookfront": 1,
+    "binary": false,
+    "log": false
+  },
+  "training_param": {
+    "class_weight": true,
+    "batch_size": 128,
+    "loss_function": "categorical_crossentropy",
+    "initial_epoch": 0,
+    "input_timesteps": 30,
+    "n_epochs": 10
+  },
+  "cv_param": {
+    "cv_split": 10,
+    "cv_test_start": 0.7
+  }
+}
