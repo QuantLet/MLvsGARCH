@@ -247,4 +247,4 @@ def plot_class_results(results, type_, savefig=True, legend=True, title=None):
         fig.suptitle(title, fontsize=16)
 
     if savefig:
-        plt.savefig('plot_%s.png' % type_)
+        plt.savefig('plot_%s.png' % type_, bbox_inches = 'tight')
