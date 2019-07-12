@@ -1,6 +1,6 @@
 import sys
 sys.path.append('../')
-from MLvsGARCHml.core import load_data
+from MLvsGARCHml.core import load_data, get_total_roc_curve
 from resultprocess import get_pred, get_cv_results, get_metrics, plot_class_results
 import pandas as pd
 import json
@@ -15,6 +15,9 @@ import datetime as dt
 dl_model = "../MLvsGARCHml/saved_models/12072019-143851/"
 model_epoch = 9
 econ_model = "../MLvsGARCHecon/saved_models/20190712150215_FINAL/"
+
+get_total_roc_curve(dir_=dl_model, epoch_number=model_epoch, fig_name = 'Total', legend = True)
+    
 
 # Change list of plots to produce
 plots = ['positive', 'TN', 'TP', 'FN', 'FP', 'TP_price']

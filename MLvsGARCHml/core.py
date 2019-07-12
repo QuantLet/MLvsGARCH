@@ -445,7 +445,7 @@ def plot_roc_curve(y_test, preds, figure_dir, fig_name, create_plot=True, legend
     fpr, tpr, threshold = metrics.roc_curve(y_test, preds, pos_label=1)
 
     roc_auc = metrics.auc(fpr, tpr)
-    plt.title('Receiver Operating Characteristic')
+    # plt.title('Receiver Operating Characteristic')
     if plot_type == 'roc':
         plt.plot(fpr, tpr, color=color, label='AUC = %0.2f ' % roc_auc + 'for {}'.format(class_i) + label_append)
         plt.plot([0, 1], [0, 1], 'r--')
@@ -456,7 +456,8 @@ def plot_roc_curve(y_test, preds, figure_dir, fig_name, create_plot=True, legend
     if legend:
         plt.legend(loc='lower right')
     if create_plot:
-        plt.savefig('{}/{}-ROC.png'.format(figure_dir, fig_name))
+        plt.savefig('{}/{}-ROC.png'.format(figure_dir, fig_name),
+                    bbox_inches='tight')
         plt.clf()
 
 
@@ -583,7 +584,7 @@ def roc_curve(y_test, preds, figure_dir, fig_name, create_plot=True, legend=True
     # calculate the fpr and tpr for all thresholds of the classification
     fpr, tpr, threshold = metrics.roc_curve(y_test, preds, pos_label=1)
     roc_auc = metrics.auc(fpr, tpr)
-    plt.title('Receiver Operating Characteristic')
+    # plt.title('Receiver Operating Characteristic')
     if plot_type == 'roc':
         plt.plot(fpr, tpr, color=color, label='AUC = %0.2f ' % roc_auc + 'for {}'.format(class_i) + label_append)
         plt.plot([0, 1], [0, 1],'r--')
@@ -646,3 +647,59 @@ def plot_selection(dir_, plot_type):
         os.makedirs(save_dir)
 
     plt.savefig('{}{}.png'.format(save_dir, plot_type))
+
+
+def get_total_roc_curve(dir_='./saved_models/12072019-143851/', epoch_number='9', fig_name = 'Total', legend = False):
+
+    cv = [int(d) for d in os.listdir(dir_) if d.isdigit()]
+    cv.sort()
+    n_epochs = int(list(filter(lambda x: 'prediction' in x, os.listdir(dir_ + '/' + str(cv[0]))))[0].split('-')[1])
+    cv_k = len(cv)
+
+    total_pred = pd.DataFrame()
+
+    for cv_split_i in cv:
+        pred_dir = '{}/{}/e={}-{}-prediction.pkl'.format(dir_, str(cv_split_i), epoch_number, n_epochs)
+        pred = pickle.load(open(pred_dir, 'rb'))
+        total_pred = pd.concat([total_pred, pred])
+
+    predictions = total_pred[['prediction_0', 'prediction_1', 'prediction_2']].values
+    label = total_pred['target'].values
+
+    n_classes = len(np.unique(label))
+    y_test = np.zeros((len(label), n_classes))
+    y_test[np.arange(len(label)), label] = 1
+
+    if n_classes == 3:
+        for class_i in range(3):
+            y_test_i = y_test + 0
+            y_test_i[:, 0] = np.max(y_test[:, [k for k in range(n_classes) if k != class_i]], axis=1)
+            y_test_i[:, 1] = y_test[:, class_i]
+            y_test_i = y_test_i[:, 0:2]
+            predictions_i = predictions + 0
+            predictions_i[:, 0] = np.sum(predictions[:, [k for k in range(n_classes) if k != class_i]], axis=1)
+            predictions_i[:, 1] = predictions[:, class_i]
+            predictions_i = predictions_i[:, 0:2]
+
+            plot_roc_curve(np.asarray(y_test_i).T[1, :], predictions_i[:, 1],
+                           dir_, fig_name + '_one_vs_all', create_plot=(class_i == (n_classes - 1)),
+                           color=['b', 'r', 'g'][class_i], class_i=class_i)
+
+        for class_i in range(3):
+            class_0 = (class_i + 1) % 3
+            class_1 = class_i
+            y_test_i = y_test + 0
+            y_test_i[:, 0] = y_test[:, class_0]
+            y_test_i[:, 1] = y_test[:, class_1]
+            y_test_i = y_test_i[:, 0:2]
+            predictions_i = predictions + 0
+            predictions_i[:, 0] = predictions[:, class_0]
+            predictions_i[:, 1] = predictions[:, class_1]
+            predictions_i = predictions_i[:, 0:2]
+            I = np.sum(y_test_i, axis=1) != 0
+            y_test_i = y_test_i[I, :]
+            predictions_i = predictions_i[I, :]
+            plot_roc_curve(np.asarray(y_test_i).T[1, :], predictions_i[:, 1], dir_, fig_name + '_one_vs_one',
+                           create_plot=(class_i == (n_classes - 1)),
+                           color=['b', 'r', 'g'][class_0], class_i=class_0, label_append=str(class_1),
+                           legend = legend)
