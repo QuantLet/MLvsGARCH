@@ -37,7 +37,6 @@ returns.columns = ['returns']
 returns.index = returns.index - dt.timedelta(hours = 1) # reindex to match with signal indices
 logreturns = np.log(returns + 1)
 
-
 cv_split = config['cv_param']['cv_split']
 n_classes = config['data_param']['n_classes']
 
@@ -45,3 +44,30 @@ results = get_cv_results(returns, dl_model, econ_model, threshold, cv_split, n_c
 
 for type_ in plots:
     plot_class_results(results, type_, title=None, legend=False,savefig=True)
+
+
+precision = pd.DataFrame()
+precision['garch'] = [results[k]['metrics']['garch'][0] for k in results.keys()]
+precision['lstm'] = [results[k]['metrics']['lstm'][0] for k in results.keys()]
+
+recall = pd.DataFrame()
+recall['garch'] = [results[k]['metrics']['garch'][1] for k in results.keys()]
+recall['lstm'] = [results[k]['metrics']['lstm'][1] for k in results.keys()]
+
+fmeasure = pd.DataFrame()
+fmeasure['garch'] = [results[k]['metrics']['garch'][2] for k in results.keys()]
+fmeasure['lstm'] = [results[k]['metrics']['lstm'][2] for k in results.keys()]
+
+
+fpr = pd.DataFrame()
+fpr['garch'] = [results[k]['metrics']['garch'][3] for k in results.keys()]
+fpr['lstm'] = [results[k]['metrics']['lstm'][3] for k in results.keys()]
+
+print(fmeasure.describe().round(2))
+fmeasure.describe().round(2).to_csv('f_measure.csv')
+
+print(recall.describe().round(2))
+recall.describe().round(2).to_csv('recall.csv')
+
+print(precision.describe().round(2))
+precision.describe().round(2).to_csv('precision.csv')

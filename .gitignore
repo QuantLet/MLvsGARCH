@@ -4,9 +4,13 @@
 .Ruserdata
 .idea
 MLvsGARCHml/.ipynb_checkpoints/*
+MLvsGARCHml/__pycache__/*
+/__pycache__/*
 MLvsGARCHcomp/.ipynb_checkpoints/*
+MLvsGARCHcomp/__pycache__/*
 
 MLvsGARCHecon/.Rproj.user/*
 MLvsGARCHecon/.RData
 MLvsGARCHecon/.Rhistory
+venv/*
 
