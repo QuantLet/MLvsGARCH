@@ -12,8 +12,8 @@
     }
   },
   "label_param": {
-    "lowerBand": -0.014,
-    "upperBand": 0.014,
+    "lowerBand": -0.0035,
+    "upperBand": 0,
     "lookfront": 1,
     "binary": false,
     "log": false
