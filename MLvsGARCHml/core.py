@@ -445,7 +445,8 @@ def plot_roc_curve(y_test, preds, figure_dir, fig_name, create_plot=True, legend
     fpr, tpr, threshold = metrics.roc_curve(y_test, preds, pos_label=1)
 
     roc_auc = metrics.auc(fpr, tpr)
-    # plt.title('Receiver Operating Characteristic')
+
+    plt.rcParams["figure.figsize"] = (10,10)
     if plot_type == 'roc':
         plt.plot(fpr, tpr, color=color, label='AUC = %0.2f ' % roc_auc + 'for {}'.format(class_i) + label_append)
         plt.plot([0, 1], [0, 1], 'r--')

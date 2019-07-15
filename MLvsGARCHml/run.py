@@ -60,13 +60,7 @@ def run(config,
                                         'date_test': list(map(str, date_test))
                                         }
             
-        for epoch_number in range(training_param['n_epochs']):
-            get_total_roc_curve(dir_=model_dir,
-                                epoch_number=epoch_number,
-                                fig_name='e={}-Total'.format(epoch_number),
-                                legend=True)
+    for epoch_number in range(training_param['n_epochs']):
+        get_total_roc_curve()
 
-        json.dump(global_dates, open('%s/global_dates.json' % model_dir, 'w'))
-
-    else:
-        raise NotImplementedError()
+    json.dump(global_dates, open('%s/global_dates.json' % model_dir, 'w'))

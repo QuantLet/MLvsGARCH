@@ -2,7 +2,7 @@ rm(list = ls(all = TRUE))
 graphics.off()
 
 # install and load packages
-libraries = c("rugarch")
+libraries = c("rugarch", "FinTS")
 lapply(libraries, function(x) if (!(x %in% installed.packages())) {
   install.packages(x)
 })
@@ -71,8 +71,8 @@ essgarch12 <- ugarchfit(spec, ret, solver = 'hybrid')
 par(pty="s")
 plot(essgarch12, which = 9)#, xlim = c(-15,15))
 
-# To control plot param need to call qqDist
-par(pty="s") 
+
+# To control plot param need to call qdist and .qqLine
 zseries = as.numeric(residuals(essgarch12, standardize=TRUE))
 distribution = essgarch12@model$modeldesc$distribution
 idx = essgarch12@model$pidx
@@ -80,6 +80,14 @@ pars  = essgarch12@fit$ipars[,1]
 skew  = pars[idx["skew",1]]
 shape = pars[idx["shape",1]]
 if(distribution == "ghst") ghlambda = -shape/2 else ghlambda = pars[idx["ghlambda",1]]
-rugarch:::.qqDist(y = zseries, dist = distribution, lambda = ghlambda, 
-                  skew = skew, shape = shape,
-                  ylim = c(-15,15), main ='')
+
+par(mfrow = c(1, 1), pty="s") 
+n = length(zseries)
+x = qdist(distribution = distribution, lambda = ghlambda, 
+      skew = skew, shape = shape, p = ppoints(n))[order(order(zseries))]
+plot(x, zseries,  ylim = c(-15,15), ylab="Sample Quantiles", xlab="Theoretical Quantiles")
+rugarch:::.qqLine(y = zseries, dist = distribution, datax = TRUE,  lambda = ghlambda, 
+                  skew = skew, shape = shape)
+
+
+
