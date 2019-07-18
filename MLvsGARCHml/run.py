@@ -9,7 +9,7 @@ def run(config,
         training=True):
     data_param, label_param, training_param, cv_param = config["data_param"], config["label_param"], config["training_param"], config["cv_param"]
     epoch_count = 0
-    model_dir = 'saved_models/{}'.format(dt.datetime.now().strftime('%d%m%Y-%H%M%S'))
+    model_dir = 'saved_models/{}-{}'.format(dt.datetime.now().strftime('%d%m%Y-%H%M%S'), config["comments"])
 
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
@@ -61,6 +61,9 @@ def run(config,
                                         }
             
     for epoch_number in range(training_param['n_epochs']):
-        get_total_roc_curve()
+        get_total_roc_curve(dir_=model_dir,
+                            epoch_number=epoch_number,
+                            fig_name = 'e_%s_total' % epoch_number,
+                            legend = True)
 
     json.dump(global_dates, open('%s/global_dates.json' % model_dir, 'w'))

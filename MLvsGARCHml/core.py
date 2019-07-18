@@ -650,12 +650,29 @@ def plot_selection(dir_, plot_type):
     plt.savefig('{}{}.png'.format(save_dir, plot_type))
 
 
-def get_total_roc_curve(dir_='./saved_models/12072019-143851/', epoch_number='9', fig_name = 'Total', legend = False):
-
+def get_total_pred(dir_='./saved_models/12072019-143851/', epoch_number='9', file_name = 'total'):
     cv = [int(d) for d in os.listdir(dir_) if d.isdigit()]
     cv.sort()
     n_epochs = int(list(filter(lambda x: 'prediction' in x, os.listdir(dir_ + '/' + str(cv[0]))))[0].split('-')[1])
-    cv_k = len(cv)
+
+    total_pred = pd.DataFrame()
+
+    for cv_split_i in cv:
+        pred_dir = '{}/{}/e={}-{}-prediction.pkl'.format(dir_, str(cv_split_i), epoch_number, n_epochs)
+    pred = pickle.load(open(pred_dir, 'rb'))
+    total_pred = pd.concat([total_pred, pred])
+    if file_name:
+        pickle.dump(total_pred, open('{}/e={}-{}-{}_prediction.pkl'.format(dir_, epoch_number, n_epochs, file_name), "wb"))
+
+    return total_pred
+
+
+def get_total_roc_curve(dir_='./saved_models/12072019-143851/', epoch_number='9', fig_name = 'Total', legend = False):
+
+    '''cv = [int(d) for d in os.listdir(dir_) if d.isdigit()]
+
+    cv.sort()
+    n_epochs = int(list(filter(lambda x: 'prediction' in x, os.listdir(dir_ + '/' + str(cv[0]))))[0].split('-')[1])
 
     total_pred = pd.DataFrame()
 
@@ -663,7 +680,10 @@ def get_total_roc_curve(dir_='./saved_models/12072019-143851/', epoch_number='9'
         pred_dir = '{}/{}/e={}-{}-prediction.pkl'.format(dir_, str(cv_split_i), epoch_number, n_epochs)
         pred = pickle.load(open(pred_dir, 'rb'))
         total_pred = pd.concat([total_pred, pred])
+    pickle.dump(total_pred, '{}.e={}-{}-total_prediction.pkl'.format(dir_, epoch_number, n_epochs))
+    '''
 
+    total_pred = get_total_pred(dir_, epoch_number)
     predictions = total_pred[['prediction_0', 'prediction_1', 'prediction_2']].values
     label = total_pred['target'].values
 
