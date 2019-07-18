@@ -15,7 +15,7 @@ import datetime as dt
 
 
 # data
-def load_data(path='../data/btc_1H_20160101_20190101.csv', features=['ROCP_1'], **kwargs_label):
+def load_data(path='../data/btc_1H_20160101_20190101.csv', features=['ROCP_1'], label = 'labelPeakOverThreshold', **kwargs_label):
     """
     load raw data, build features and target
     :param path: str, path to data source
@@ -31,12 +31,24 @@ def load_data(path='../data/btc_1H_20160101_20190101.csv', features=['ROCP_1'], 
     target = 'btc_usdt'
 
     # load label
-    npLabels = labelPeakOverThreshold(dfdata.close, **kwargs_label)
+    if label == 'labelPeakOverThreshold':
+        npLabels = labelPeakOverThreshold(dfdata.close, **kwargs_label)
+        labels = pd.DataFrame(npLabels,
+                              columns=[target],
+                              index=dfdata.index)
+        dfdata['target'] = labels[target].values
 
-    labels = pd.DataFrame(npLabels,
-                          columns=[target],
-                          index=dfdata.index)
-    dfdata['target'] = labels[target].values
+
+
+    if label == 'labelQuantile':
+        npLabels, label_returns, quantiles = labelQuantile(dfdata.close.values, **kwargs_label)
+        # dflabel = pd.DataFrame(index = dfdata.index)
+        dfdata['target'] = npLabels
+        dfdata['returns'] = label_returns
+        dfdata['lower'] = quantiles[:,0]
+        dfdata['upper'] = quantiles[:,1]
+
+
 
     # load_features
     if features == ['ROCP_1']:
@@ -51,13 +63,96 @@ def load_data(path='../data/btc_1H_20160101_20190101.csv', features=['ROCP_1'], 
 
 
 # label
+def labelQuantile(close, lq = 0.1, uq = 0.9, lookfront = 1, window = 30, log = False, fee = 0, binary = False):
+    """
+
+    :param close: numpy, close price
+    :param lq: float, lower quantile
+    :param uq: float, upper quantile
+    :param lookfront: int, horizon forecast
+    :param window: int, rolling window size for computing the quantile
+    :param log: boolean, log scale or simple
+    :param fee: float, fee
+    :param binary: boolean, output is two classes or three classes
+    :return:
+    """
+
+    hist_returns = np.zeros(len(close), dtype=float)
+
+    if log:
+        hist_returns[1:] = np.log(close[1:]/close[0:-1])
+    else:
+        hist_returns[1:] = close[1:]/close[0:-1] - 1
+
+    labels = np.zeros(len(close), dtype=int)
+    returns = np.zeros(len(close), dtype=float)
+
+    lower_q = np.zeros(len(close), dtype=float)
+    upper_q = np.zeros(len(close), dtype=float)
+
+    for t in range(window, len(close) - lookfront):
+        data_w = hist_returns[t-window : t]
+        lower_q_t = np.quantile(data_w, lq) # rolling = returns.rolling(window) q10 = rolling.quantile(0.1)
+        upper_q_t = np.quantile(data_w, uq)
+
+        for i in range(1, lookfront +1):
+            ratio = hist_returns[t + i]
+            if ratio <= lower_q_t:
+                if binary:
+                    labels[t] = 1
+                else:
+                    labels[t] = 2
+
+                #returns[t] = hist_returns[t + i]
+                break
+            elif ratio >= upper_q_t:
+                labels[t] = 1
+                #returns[t] = hist_returns[t + i]
+                break
+        returns[t] = hist_returns[t + i]
+        lower_q[t] = lower_q_t
+        upper_q[t] = upper_q_t
+
+    quantiles = np.concatenate([lower_q.reshape(-1,1),
+                                upper_q.reshape(-1,1)],
+                               axis = 1)
+
+    return labels, returns, quantiles
+
+def labelQuantileDF(close, lq = 0.1, up = 0.9, lookfront = 1, window = 30, log = False):
+    """
+    close: pd.dataframe
+    """
+
+
+    if log:
+        returns = np.log(close).diff()
+    else:
+        returns = close.pct_change()
+
+    lowerband = returns.expanding(window).quantile(lq)
+    upperband = returns.expanding(window).quantile(up)
+
+    quantiles = pd.concat([lowerband, upperband], axis = 1)
+    quantiles.columns = ['lower', 'upper']
+
+    labels = pd.DataFrame(index = returns.index, columns = ['label'])
+    labels['label'] = 0
+
+    labels.loc[(returns <= lowerband).values.reshape(-1), 'label'] = 2
+    labels.loc[(returns >= upperband).values.reshape(-1), 'label'] = 1
+
+    return labels, quantiles
+
 def labelPeakOverThreshold(close,
                            lowerBand=-0.05,
                            upperBand=0.05,
                            lookfront=5,
                            binary=False,
-                           log=False):
+                           log=False,
+                           fee = 0):
     labels = np.zeros(len(close), dtype=int)
+    returns = np.zeros(len(close), dtype=float)
     for t in range(len(close) - lookfront):
         enter = True
         for i in range(1, lookfront + 1):
@@ -73,6 +168,7 @@ def labelPeakOverThreshold(close,
             elif ratio >= upperBand_i and enter:
                 labels[t] = 1
                 break
+        returns[t] = (ratio + 1) * (1 - fee)**2 - 1
     return labels
 
 

@@ -1,4 +1,5 @@
 {
+  "comments": "first_train_quantile_label_10%_epoch_20",
   "data_param": {
     "data_path": "../data/btc_1H_20160101_20190101.csv",
     "n_classes": 3,
@@ -11,9 +12,11 @@
       "n_ma": 1000
     }
   },
+  "label": "labelQuantile",
   "label_param": {
-    "lowerBand": -0.0035,
-    "upperBand": 0,
+    "lq": 0.1,
+    "uq": 0.9,
+    "window": 168,
     "lookfront": 1,
     "binary": false,
     "log": false
@@ -24,7 +27,7 @@
     "loss_function": "categorical_crossentropy",
     "initial_epoch": 0,
     "input_timesteps": 30,
-    "n_epochs": 10
+    "n_epochs": 20
   },
   "cv_param": {
     "cv_split": 10,

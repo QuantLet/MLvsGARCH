@@ -2,7 +2,7 @@ from core import plot_performance, load_data, train_predict, get_total_roc_curve
 import json, os
 import datetime as dt
 from keras import backend as keras_backend
-
+import pickle
 
 def run(config,
         classification=True,
@@ -17,8 +17,10 @@ def run(config,
     json.dump(config, open('{}/config.json'.format(model_dir), 'w'))
 
     # load feature and label
-    dfdata, target = load_data(path=data_param['data_path'], features=data_param['features'], **label_param)
+    dfdata, target = load_data(path=data_param['data_path'], features=data_param['features'], label = config['label'], **label_param)
     print(dfdata.head())
+
+    pickle.dump(dfdata, open('%s/dfdata.p' % model_dir, "wb"))
 
     global_dates = {}
 
@@ -29,7 +31,8 @@ def run(config,
             for epoch_number in range(training_param['n_epochs']):
                 print('Epoch %d' % epoch_number)
                 predictions, model, y_test, data_loader, date_test, target = train_predict(
-                    dfdata, target,
+                    dfdata,
+                    target,
                     model=model,
                     model_dir=model_dir,
                     features=data_param['features'],
