@@ -263,6 +263,7 @@ class Model():
         callbacks = [
             ModelCheckpoint(filepath=save_fname + '/callback', monitor='loss', save_best_only=True)
         ]  # Early stopping ??
+        print('Training class weight: ', class_weight)
 
         hist = self.model.fit_generator(
             train_generator,
@@ -402,7 +403,6 @@ class DataLoader():
             print('LABELS:')
             for i in range(len(labels)):
                 print('{}: {:.2f}%'.format(labels[i], n_label[i] / np.sum(n_label) * 100))
-
         print('Training from %s to %s' % (list(self.dfdata_train.index.astype(str))[0],
                                           list(self.dfdata_train.index.astype(str))[-1]))
 
@@ -644,7 +644,10 @@ def train_predict(dfdata, target,  # data_path='../data/btc_1H_20160101_20190101
                       lookfront=lookfront, class_weight=class_weight,
                       cv_split_i=cv_split_i, cv_split=cv_split, cv_test_start=cv_test_start,
                       normalization=normalization)
-
+    if class_weight:
+        cweights = data.class_weight
+    else:
+        cweights = None
     # main training loop
     if training:
         steps_per_epoch = math.ceil(data.len_train / batch_size)
@@ -662,7 +665,8 @@ def train_predict(dfdata, target,  # data_path='../data/btc_1H_20160101_20190101
             test_generator=None,
             epochs=initial_epoch + epochs,
             initial_epoch=initial_epoch,
-            use_multiprocessing=False
+            use_multiprocessing=False,
+            class_weight=cweights
         )
 
     # Predict on correspond validation set
@@ -755,8 +759,9 @@ def get_total_pred(dir_='./saved_models/12072019-143851/', epoch_number='9', fil
 
     for cv_split_i in cv:
         pred_dir = '{}/{}/e={}-{}-prediction.pkl'.format(dir_, str(cv_split_i), epoch_number, n_epochs)
-    pred = pickle.load(open(pred_dir, 'rb'))
-    total_pred = pd.concat([total_pred, pred])
+        pred = pickle.load(open(pred_dir, 'rb'))
+        total_pred = pd.concat([total_pred, pred])
+
     if file_name:
         pickle.dump(total_pred, open('{}/e={}-{}-{}_prediction.pkl'.format(dir_, epoch_number, n_epochs, file_name), "wb"))
 

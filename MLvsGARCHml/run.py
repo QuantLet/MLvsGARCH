@@ -20,7 +20,8 @@ def run(config,
     dfdata, target = load_data(path=data_param['data_path'], features=data_param['features'], label = config['label'], **label_param)
     print(dfdata.head())
 
-    pickle.dump(dfdata, open('%s/dfdata.p' % model_dir, "wb"))
+    if config['label'] == 'labelQuantile':
+        pickle.dump(dfdata, open('%s/dfdata.p' % model_dir, "wb"))
 
     global_dates = {}
 
