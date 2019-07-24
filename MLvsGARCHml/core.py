@@ -53,7 +53,11 @@ def load_data(path='../data/btc_1H_20160101_20190101.csv', features=['ROCP_1'], 
     # load_features
     if features == ['ROCP_1']:
         feature = dfdata[['close']].pct_change()
-        feature.columns = ['ROCP_1']
+        feature.columns = features
+
+    elif features == ['log_ROCP_1']:
+        feature = np.log(dfdata[['close']].pct_change() + 1)
+        feature.columns = features
 
     dfdata = pd.concat([dfdata, feature], axis=1)
 
@@ -63,7 +67,15 @@ def load_data(path='../data/btc_1H_20160101_20190101.csv', features=['ROCP_1'], 
 
 
 # label
-def labelQuantile(close, lq = 0.1, uq = 0.9, lookfront = 1, window = 30, log = False, fee = 0, binary = False):
+def labelQuantile(close,
+                  lq = 0.1,
+                  uq = 0.9,
+                  lookfront = 1,
+                  window = 30,
+                  threshold = None,
+                  log = False,
+                  fee = 0,
+                  binary = False):
     """
 
     :param close: numpy, close price
@@ -92,8 +104,15 @@ def labelQuantile(close, lq = 0.1, uq = 0.9, lookfront = 1, window = 30, log = F
 
     for t in range(window, len(close) - lookfront):
         data_w = hist_returns[t-window : t]
-        lower_q_t = np.quantile(data_w, lq) # rolling = returns.rolling(window) q10 = rolling.quantile(0.1)
-        upper_q_t = np.quantile(data_w, uq)
+
+        if threshold is not None:
+            losses = data_w[data_w < -threshold]
+            gains = data_w[data_w >= threshold]
+            lower_q_t = np.quantile(losses, lq)
+            upper_q_t = np.quantile(gains, uq)
+        else:
+            lower_q_t = np.quantile(data_w, lq) # rolling = returns.rolling(window) q10 = rolling.quantile(0.1)
+            upper_q_t = np.quantile(data_w, uq)
 
         for i in range(1, lookfront +1):
             ratio = hist_returns[t + i]
@@ -102,13 +121,11 @@ def labelQuantile(close, lq = 0.1, uq = 0.9, lookfront = 1, window = 30, log = F
                     labels[t] = 1
                 else:
                     labels[t] = 2
-
-                #returns[t] = hist_returns[t + i]
                 break
             elif ratio >= upper_q_t:
                 labels[t] = 1
-                #returns[t] = hist_returns[t + i]
                 break
+
         returns[t] = hist_returns[t + i]
         lower_q[t] = lower_q_t
         upper_q[t] = upper_q_t
@@ -118,6 +135,7 @@ def labelQuantile(close, lq = 0.1, uq = 0.9, lookfront = 1, window = 30, log = F
                                axis = 1)
 
     return labels, returns, quantiles
+
 
 def labelQuantileDF(close, lq = 0.1, up = 0.9, lookfront = 1, window = 30, log = False):
     """
