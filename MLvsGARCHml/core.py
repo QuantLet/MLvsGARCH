@@ -228,8 +228,8 @@ class Model():
         self.history['loss'] = []
         self.history['acc'] = []
 
-    def load_model(self, filepath):
-        print('[Model] Loading model from file %s' % filepath)
+    def load_model(self):
+        print('[Model] Loading model from file %s' % self.model_dir)
         self.model = load_model(self.model_dir)
 
     def build_model(self):
@@ -322,10 +322,11 @@ class Model():
         print('[Model] Training Completed. Model saved as %s' % save_fname)
         timer.stop()
 
-    def predict_test(self, data, input_timesteps=30, n_classes=3, loss_function=None):
+    def predict(self, data, input_timesteps=30, n_classes=3, loss_function=None, on_train = False):
         x_test, y_test, date_test = data.get_data(input_timesteps=input_timesteps,
                                                   n_classes=n_classes,
-                                                  loss_function=loss_function)
+                                                  loss_function=loss_function,
+                                                  train=on_train)
 
         prediction = self.model.predict(x_test)
         if loss_function == 'binary_crossentropy':
@@ -434,19 +435,25 @@ class DataLoader():
             else:
                 self.class_weight[key] = 1
 
-    def get_data(self, input_timesteps=30, n_classes=3, loss_function=None):
+    def get_data(self, input_timesteps=30, n_classes=3, loss_function=None, train = False):
         """Return a generator of training data from filename on given list of cols split for train/test"""
         i = self.max_lookback
 
-        train_test = True
+        if train:
+            len_data = self.len_train
+            data = self.dfdata_train
+        else:
+            len_data = self.len_test
+            data = self.dfdata_test
+
 
         x_batch = []
         y_batch = []
         t_batch = []
-        for seq_number in range(input_timesteps, self.len_test):
-            x = self.dfdata_test[[self.feature_cols]][seq_number - input_timesteps + 1: seq_number + 1: 1].values
+        for seq_number in range(input_timesteps, len_data):
+            x = data[[self.feature_cols]][seq_number - input_timesteps + 1: seq_number + 1: 1].values
             x_batch.append(x)
-            y = self.dfdata_test['target'].iloc[[seq_number]].values
+            y = data['target'].iloc[[seq_number]].values
             if n_classes > 0:
                 y_hot_encoded = np.zeros(n_classes)
                 y_hot_encoded[int(y)] = 1
@@ -454,7 +461,7 @@ class DataLoader():
             else:
                 y_batch.append(y)
 
-            t_batch.append(self.dfdata_test.index[seq_number])
+            t_batch.append(data.index[seq_number])
 
         x_batch = np.array(x_batch)
 
@@ -462,7 +469,9 @@ class DataLoader():
         if loss_function == 'binary_crossentropy':
             y_batch = np.array([y_batch[:, 1]]).T
 
+
         return x_batch, y_batch, t_batch
+
 
     def generate_train_batch_random(self, batch_size, train=True,
                                     input_timesteps=30, loss_function=None, n_classes=3):
@@ -686,16 +695,21 @@ def train_predict(dfdata, target,  # data_path='../data/btc_1H_20160101_20190101
             use_multiprocessing=False,
             class_weight=cweights
         )
+        # Predict on correspond validation set
+        predictions, y, date = model.predict(data,
+                                                       input_timesteps=input_timesteps,
+                                                       n_classes=n_classes,
+                                                       loss_function=loss_function)
 
-    # Predict on correspond validation set
-    trainining = False
-    if not trainining:
-        predictions, y_test, date_test = model.predict_test(data,
-                                                            input_timesteps=input_timesteps,
-                                                            n_classes=n_classes,
-                                                            loss_function=loss_function)
+    else:
+        # Predict on correspond training set
+        predictions, y, date = model.predict(data,
+                                                       input_timesteps=input_timesteps,
+                                                       n_classes=n_classes,
+                                                       loss_function=loss_function,
+                                                       on_train = True)
 
-    return predictions, model, y_test, data, date_test, target
+    return predictions, model, y, data, date, target
 
 
 # model selection methods
