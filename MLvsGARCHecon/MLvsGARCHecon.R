@@ -26,7 +26,9 @@ n_train = 6*month #length(ret$close[(ret$dates <=cv[1])])
 comments = paste0('FINAL')
 
 ####### cross validation folds
-cv <- fromJSON(file = "../MLvsGARCHml/saved_models/12072019-143851/global_dates.json")
+
+dir_ = '24072019-111446-labelQuantile_cv_day_log_class_weighted'
+cv <- fromJSON(file = paste0(paste0("../MLvsGARCHml/saved_models/", dir_), "/global_dates.json"))
 nb_cv = length(cv)
 ####### Refit frequency of GARCH model
 every = nb_cv

@@ -1,36 +1,36 @@
 {
-  "label": "labelQuantile",
-  "comments": "quantile_label_10%_window_24_epoch_20_class_weighted",
+  "training_param": {
+    "n_epochs": 40,
+    "input_timesteps": 30,
+    "batch_size": 128,
+    "initial_epoch": 0,
+    "loss_function": "categorical_crossentropy",
+    "class_weight": true
+  },
+  "label_param": {
+    "log": true,
+    "lookfront": 1,
+    "uq": 0.9,
+    "lq": 0.1,
+    "binary": false,
+    "window": 24
+  },
+  "comments": "labelQuantile_cv_10_log_class_weighted",
   "cv_param": {
     "cv_split": 10,
     "cv_test_start": 0.7
   },
-  "label_param": {
-    "window": 24,
-    "uq": 0.9,
-    "lq": 0.1,
-    "binary": false,
-    "log": false,
-    "lookfront": 1
-  },
-  "training_param": {
-    "initial_epoch": 0,
-    "n_epochs": 20,
-    "loss_function": "categorical_crossentropy",
-    "input_timesteps": 30,
-    "class_weight": true,
-    "batch_size": 128
-  },
+  "label": "labelQuantile",
   "data_param": {
-    "n_classes": 3,
-    "normalization": {
-      "n_ma": 1000,
-      "mean": 0,
-      "sigma": null
-    },
     "data_path": "../data/btc_1H_20160101_20190101.csv",
+    "normalization": {
+      "sigma": null,
+      "mean": 0,
+      "n_ma": 1000
+    },
     "features": [
-      "ROCP_1"
-    ]
+      "log_ROCP_1"
+    ],
+    "n_classes": 3
   }
 }
