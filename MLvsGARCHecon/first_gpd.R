@@ -10,19 +10,14 @@ library(rugarch)
 library(MLmetrics)
 
 # VaR for a Generalized Pareto Distribution (GDP)
-gdp.quantile = function(probs, threshold, scale, shape, n, Nu) {
-  quant = threshold + (scale / shape) * (((n / Nu) * (1 - probs)) ^ (-shape) - 1)
-  return(quant)
-}
-
-var.normal = function(mean, sd, probs)
+var.normal = function(probs, mean, sd)
 {
   var = mean + sd * qnorm(p = probs)
   return(var)
 }
 
 # VaR for a Generalized Pareto Distribution (GDP)
-var.gpd = function(threshold, scale, shape, probs, n, Nu)
+var.gpd = function(probs, threshold, scale, shape, n, Nu)
 {
   var = threshold + (scale / shape) * (((n / Nu) * (1 - probs)) ^ (-shape) - 1)
   return(var)
@@ -72,18 +67,17 @@ fit_pred = function() {
     Nu = EVTmodel.fit$nexc
     
     #EVTmodel.zq = qgpd(q, loc = EVTmodel.threshold, scale = EVTmodel.scale, shape = EVTmodel.shape)
-    EVTmodel.zq = gdp.quantile(q, EVTmodel.threshold, EVTmodel.scale, EVTmodel.shape, n, Nu)
+    EVTmodel.zq = var.gpd(q, EVTmodel.threshold, EVTmodel.scale, EVTmodel.shape, n, Nu)
     
     # Predict return value
     predicted_value_mean = model.mean + model.sd * EVTmodel.zq
-    predicted_norm = var.normal(mean = model.mean,
-                                sd = model.sd,
-                                probs = q)
+    predicted_norm = var.normal(probs = q,
+                                mean = model.mean,
+                                sd = model.sd)
     
     # predicted_value = model.sd * EVTmodel.zq
     #prediction[count, ((j-1) * 2 + 4)] = predicted_value_mean
     #prediction[count, ((j-1) * 2 + 5)] = predicted_norm
-    
     
     q_data = c(EVTmodel.threshold, predicted_value_mean, predicted_norm, model.mean , model.sd, EVTmodel.zq)
     
@@ -149,10 +143,13 @@ for (i in (window_size + 1):(window_size + test_size)) {
   # Fit model and get prediction
   if (!TEST){
     prediction_i =  tryCatch(
-    fit_pred(),
-    error = function(e)
-      base::rep(NA, ncol(prediction)), #function(e) base::print('ERROR'),
-    silent = FALSE)
+      
+      fit_pred(),
+      
+      error = function(e)
+        base::rep(NA, ncol(prediction)), #function(e) base::print('ERROR'),
+      
+      silent = FALSE)
     }
   if (TEST){
     prediction_i = fit_pred()
