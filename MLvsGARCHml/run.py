@@ -68,13 +68,15 @@ def run(config,
                                         'test': list(data_loader.test_index_time.astype(str)),
                                         'date_test': list(map(str, date_test))
                                         }
-            json.dump(global_dates, open('%s/global_dates.json' % model_dir, 'w'))
+
             
         for epoch_number in range(training_param['n_epochs']):
             get_total_roc_curve(dir_=model_dir,
                                 epoch_number=epoch_number,
                                 fig_name = 'e_%s_total' % epoch_number,
                                 legend = True)
+        json.dump(global_dates, open('%s/global_dates.json' % model_dir, 'w'))
+
     else:
         for cv_split_i in range(cv_param['cv_split']):
             keras_backend.clear_session()
