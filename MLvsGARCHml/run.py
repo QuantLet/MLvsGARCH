@@ -68,6 +68,7 @@ def run(config,
                                         'test': list(data_loader.test_index_time.astype(str)),
                                         'date_test': list(map(str, date_test))
                                         }
+            json.dump(global_dates, open('%s/global_dates.json' % model_dir, 'w'))
             
         for epoch_number in range(training_param['n_epochs']):
             get_total_roc_curve(dir_=model_dir,
@@ -108,4 +109,3 @@ def run(config,
                              data_loader, classification)
             print(date_test[-1])
 
-    json.dump(global_dates, open('%s/global_dates.json' % model_dir, 'w'))
