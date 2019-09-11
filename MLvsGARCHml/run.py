@@ -26,7 +26,7 @@ def run(config,
     print(dfdata.head())
 
     if config['label'] == 'labelQuantile':
-        pickle.dump(dfdata, open('%s/dfdata.p' % model_dir, "wb"))
+        dfdata.to_pickle('%s/dfdata.p' % model_dir)
 
     global_dates = {}
 

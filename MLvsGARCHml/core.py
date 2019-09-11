@@ -600,7 +600,8 @@ def plot_performance(target, y_test, predictions, date_test, figure_dir, fig_nam
 
     for key in ['high', 'close', 'open', 'low']:
         results[key] = data_loader.database.loc[date_test, [key]]
-    pickle.dump(results, open('{}/{}-prediction.pkl'.format(figure_dir, fig_name), "wb"))
+
+    results.to_pickle('{}/{}-prediction.pkl'.format(figure_dir, fig_name))
 
     if classification:
         if n_classes == 3:
@@ -796,7 +797,7 @@ def get_total_pred(dir_='./saved_models/12072019-143851/', epoch_number='9', fil
         total_pred = pd.concat([total_pred, pred])
 
     if file_name:
-        pickle.dump(total_pred, open('{}/e={}-{}-{}_prediction.pkl'.format(dir_, epoch_number, n_epochs, file_name), "wb"))
+        total_pred.to_pickle('{}/e={}-{}-{}_prediction.pkl'.format(dir_, epoch_number, n_epochs, file_name))
 
     return total_pred
 
