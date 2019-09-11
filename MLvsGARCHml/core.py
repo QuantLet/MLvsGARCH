@@ -51,15 +51,16 @@ def load_data(path='../data/btc_1H_20160101_20190101.csv', features=['ROCP_1'], 
 
 
     # load_features
-    if features == ['ROCP_1']:
-        feature = dfdata[['close']].pct_change()
-        feature.columns = features
+    if features is not None:
+        if features == ['ROCP_1']:
+            feature = dfdata[['close']].pct_change()
+            feature.columns = features
 
-    elif features == ['log_ROCP_1']:
-        feature = np.log(dfdata[['close']].pct_change() + 1)
-        feature.columns = features
+        elif features == ['log_ROCP_1']:
+            feature = np.log(dfdata[['close']].pct_change() + 1)
+            feature.columns = features
 
-    dfdata = pd.concat([dfdata, feature], axis=1)
+        dfdata = pd.concat([dfdata, feature], axis=1)
 
     target = 'target'
 
