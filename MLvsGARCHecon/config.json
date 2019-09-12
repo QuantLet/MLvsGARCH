@@ -1,0 +1,18 @@
+{
+  "data_param": {
+    "log": true,
+    "normalization": {
+    },
+    "data_path": "../data/btc_1H_20160101_20190101.csv"
+  },
+  "training_param": {
+    "window_size": 2880,
+    "q_fit": 0.1
+  },
+  "comments": "",
+  "quantiles": [0.1],
+  "cv_param": {
+    "cv_test_start": 0.7,
+    "cv_split": 10
+  }
+}
