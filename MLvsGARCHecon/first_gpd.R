@@ -9,6 +9,10 @@ library(fGarch)
 library(rugarch)
 library(MLmetrics)
 
+# Constants
+day = 24
+month = day*30
+
 # VaR for a Generalized Pareto Distribution (GDP)
 var.normal = function(probs, mean, sd)
 {
@@ -102,7 +106,7 @@ dataset <- timeSeries::as.timeSeries(dataset, FinCenter = "GMT")
 dataset = dataset[rownames(dataset) >= '2017-05-01 00:00:00', 1]
 
 # Fit model on one month history
-window_size = 24 * 30
+window_size = 4 * month
 q_fit = 0.1  # fit to 10% of worst outcomes
 
 # Convert price series to loss series
