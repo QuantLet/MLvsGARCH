@@ -6,7 +6,6 @@ set.seed(10)
 library(POT)
 library(ismev)
 library(fGarch)
-library(rugarch)
 library(MLmetrics)
 
 # Constants
