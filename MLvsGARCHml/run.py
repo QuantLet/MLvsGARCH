@@ -21,7 +21,7 @@ def run(config,
     json.dump(config, open('{}/config.json'.format(model_dir), 'w'))
 
     # load feature and label
-    dfdata, target = load_data(path=data_param['data_path'], features=data_param['features'], label = config['label'], **label_param)
+    dfdata, target, feature_names = load_data(path=data_param['data_path'], features=data_param['features'], label = config['label'], **label_param)
     print(dfdata.head())
 
     if config['label'] == 'labelQuantile':
@@ -40,7 +40,7 @@ def run(config,
                     target,
                     model=model,
                     model_dir=model_dir,
-                    features=data_param['features'],
+                    features=feature_names,
                     cv_split_i=cv_split_i,
                     cv_split=cv_param['cv_split'],
                     cv_test_start=cv_param['cv_test_start'],
@@ -89,7 +89,7 @@ def run(config,
                 target,
                 model=model,
                 model_dir=model_dir,
-                features=data_param['features'],
+                features=feature_names,
                 cv_split_i=cv_split_i,
                 cv_split=cv_param['cv_split'],
                 cv_test_start=cv_param['cv_test_start'],

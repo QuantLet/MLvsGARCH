@@ -15,7 +15,7 @@ import datetime as dt
 
 
 # data
-def load_data(path='../data/btc_1H_20160101_20190101.csv', features=['ROCP_1'], label='labelPeakOverThreshold',
+def load_data(path='../data/btc_1H_20160101_20190101.csv', features=None, label='labelPeakOverThreshold',
               **kwargs_label):
     """
     load raw data, build features and target
@@ -48,20 +48,23 @@ def load_data(path='../data/btc_1H_20160101_20190101.csv', features=['ROCP_1'], 
         dfdata['upper'] = quantiles[:, 1]
 
     # load_features
+    feature_names = []
     if features is not None:
-        if features == ['ROCP_1']:
-            feature = dfdata[['close']].pct_change()
-            feature.columns = features
+        for feature in features:
+            feature_name = feature['name']
+            if feature_name == 'ROCP':
+                dffeature = dfdata[['close']].pct_change(feature['params']['timeperiod'])
+            if feature_name == 'log_ROCP':
+                dffeature = np.log(dfdata[['close']].pct_change(feature['params']['timeperiod']) + 1)
 
-        elif features == ['log_ROCP_1']:
-            feature = np.log(dfdata[['close']].pct_change() + 1)
-            feature.columns = features
 
-        dfdata = pd.concat([dfdata, feature], axis=1)
+            feature_name = feature_name + '_' + '_'.join('{}_{}'.format(*p) for p in feature['params'].items())
+            dffeature.columns = [feature_name]
+            feature_names.append(feature_name)
+            dfdata = pd.concat([dfdata, dffeature], axis=1)
 
     target = 'target'
-
-    return dfdata, target
+    return dfdata, target, feature_names
 
 
 # label
