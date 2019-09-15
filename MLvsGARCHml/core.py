@@ -15,6 +15,7 @@ import datetime as dt
 
 AVAILABLE_FEATURES = ['ROCP', 'log_ROCP', 'ewm_price', 'ewm_ROCP', 'ewm_log_ROCP']
 
+
 # data
 def load_data(path='../data/btc_1H_20160101_20190101.csv', features=None, label='labelPeakOverThreshold',
               **kwargs_label):
@@ -251,22 +252,28 @@ class Model():
         print('[Model] Loading model from file %s' % self.model_dir)
         self.model = load_model(self.model_dir)
 
-    def build_model(self):
-        model_name = 'model_test'
-        final_input_timesteps = 30
-        input_dim = 1
-        neurons1 = 4
-        return_seq1 = False
-        recurrent_dropout1 = 0.2
+    def build_model(self, input_timesteps, input_dim, output_dim, layers):
+        inputs = Input(shape=(input_timesteps, input_dim), name="input")
 
-        neurons2 = 2
-        activation2 = "tanh"
-        input_name = 'dense'
+        for i, layer in enumerate(layers):
+            if i == 0:
+                network = inputs
+            layer_type = layer['type']
+            name = layer_type + '_' + str(i)
+            if layer_type == 'LSTM':
+                network = LSTM(layer['neurons'],
+                               **layer['params'],
+                               name=name)(network)
+            elif layer_type == 'Dense':
+                network = Dense(layer['neurons'],
+                                **layer['params'],
+                                name=name)(network)
+            elif layer_type == 'softmax_output':
+                outputs = Dense(output_dim, activation="softmax", name="softmax_output")(network)
 
-        inputs = Input(shape=(final_input_timesteps, input_dim), name="input")
-        tensor = LSTM(4, return_sequences=False, recurrent_dropout=0.2, name="lstm")(inputs)
-        tensor = Dense(2, activation="tanh", name="dense")(tensor)
-        outputs = Dense(3, activation="softmax", name="output")(tensor)
+        # tensor = LSTM(neurons, return_sequences=False, recurrent_dropout=0.2, name="lstm")(inputs)
+        # tensor = Dense(2, activation="tanh", name="dense")(tensor)
+        # outputs = Dense(3, activation="softmax", name="output")(tensor)
 
         self.model = keras.models.Model(
             inputs=[inputs],
@@ -383,7 +390,7 @@ class DataLoader():
 
         assert list(dfdata.columns)[-1] == 'target', 'The last column must correspond to the target variable'
 
-        self.feature_cols = list(dfdata.columns)[0]
+        self.feature_cols = list(dffeatures.columns)
 
         all_data = np.arange(0, len(dfdata))
 
@@ -395,6 +402,25 @@ class DataLoader():
 
         self.test_index = np.r_[self.train_index[-self.seq_len:], self.test_index]
         self.train_index = self.train_index[: -lookfront]
+
+        # normalization with sd estimated with moving average
+        mean = normalization['mean']
+        sigma = normalization['sigma']
+        n_ma = normalization['n_ma']
+        if mean is None:
+            norm_nans = True
+            mean = dfdata[self.feature_cols].rolling(n_ma).mean()
+        if sigma is None:
+            norm_nans = True
+            sigma = (dfdata[self.feature_cols] ** 2).rolling(n_ma).mean() ** 0.5
+
+        # If we performed normalization with moving average with now have NaNs at beginning of train set
+        if norm_nans:
+            self.train_index = self.train_index[n_ma - 1:]
+
+        mean = mean.dropna()
+        sigma = sigma.dropna()
+
         self.train_index_time = dfdata.index[self.train_index]
         self.test_index_time = dfdata.index[self.test_index]
         self.dfdata_train = dfdata.iloc[self.train_index]
@@ -414,17 +440,6 @@ class DataLoader():
         self.max_lookback = 0
         self.n_classes = n_classes
 
-        # normalization with sd estimated with moving average
-        mean = normalization['mean']
-        sigma = normalization['sigma']
-        n_ma = normalization['n_ma']
-        if mean is None:
-            mean = dfdata[self.feature_cols].rolling(n_ma).mean()
-            mean[:(n_ma + self.max_lookback)] = mean[(n_ma + self.max_lookback)]
-        if sigma is None:
-            sigma = (dfdata[self.feature_cols] ** 2).rolling(n_ma).mean() ** 0.5
-            sigma[:(n_ma + self.max_lookback)] = sigma[(n_ma + self.max_lookback)]
-
         dfdata[self.feature_cols] -= mean
         self.mean = mean
         dfdata[self.feature_cols] /= sigma
@@ -443,7 +458,7 @@ class DataLoader():
             for i in range(len(labels)):
                 print('{}: {:.2f}%'.format(labels[i], n_label[i] / np.sum(n_label) * 100))
         print('Training set from %s to %s' % (list(self.dfdata_train.index.astype(str))[0],
-                                          list(self.dfdata_train.index.astype(str))[-1]))
+                                              list(self.dfdata_train.index.astype(str))[-1]))
 
     def class_weight_count(self, class_weight=None):
         if isinstance(class_weight, (dict)):
@@ -481,7 +496,7 @@ class DataLoader():
         y_batch = []
         t_batch = []
         for seq_number in range(input_timesteps, len_data):
-            x = data[[self.feature_cols]][seq_number - input_timesteps + 1: seq_number + 1: 1].values
+            x = data[self.feature_cols][seq_number - input_timesteps + 1: seq_number + 1: 1].values
             x_batch.append(x)
             y = data['target'].iloc[[seq_number]].values
             if n_classes > 0:
@@ -521,7 +536,7 @@ class DataLoader():
             y_batch = []
             for b in range(batch_size):
                 seq_number = self.shuffled_mapping[i]
-                x = self.dfdata_train_np[seq_number - input_timesteps + 1: seq_number + 1: 1, [0]]
+                x = self.dfdata_train_np[seq_number - input_timesteps + 1: seq_number + 1: 1, :-1]
                 x_batch.append(x)
                 y = self.dfdata_train_np[seq_number, -1]
 
@@ -564,7 +579,7 @@ class DataLoader():
             for b in range(batch_size):
                 seq_number = self.shuffled_mapping[i]
 
-                x = self.dfdata_test_np[seq_number - input_timesteps + 1: seq_number + 1: 1, [0]]
+                x = self.dfdata_test_np[seq_number - input_timesteps + 1: seq_number + 1: 1, :-1]
 
                 x_batch.append(x)
 
@@ -681,6 +696,7 @@ def train_predict(dfdata, target,  # data_path='../data/btc_1H_20160101_20190101
                   n_classes=3,
                   lookfront=1,
                   normalization={'mean': None, 'sigma': None, 'n_ma': 100},
+                  layers=None,
                   training=True):
     """
     main function to train a lstm neural network on one training set
@@ -691,7 +707,7 @@ def train_predict(dfdata, target,  # data_path='../data/btc_1H_20160101_20190101
         # Create model
         m_dir = model_dir + '/' + str(cv_split_i)
         model = Model(optimizer='adam', loss=loss_function, model_dir=m_dir)
-        model.build_model()
+        model.build_model(input_timesteps, len(features), n_classes, layers)
 
     # Create data generator for cross validation
     data = DataLoader(dfdata, features, target, input_timesteps, n_classes,
@@ -724,6 +740,7 @@ def train_predict(dfdata, target,  # data_path='../data/btc_1H_20160101_20190101
             class_weight=cweights
         )
         # Predict on corresponding validation set
+
         predictions, y, date = model.predict(data,
                                              input_timesteps=input_timesteps,
                                              n_classes=n_classes,
