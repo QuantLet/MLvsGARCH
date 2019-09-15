@@ -410,16 +410,15 @@ class DataLoader():
         if mean is None:
             norm_nans = True
             mean = dfdata[self.feature_cols].rolling(n_ma).mean()
+            mean = mean.dropna()
         if sigma is None:
             norm_nans = True
             sigma = (dfdata[self.feature_cols] ** 2).rolling(n_ma).mean() ** 0.5
+            sigma = sigma.dropna()
 
         # If we performed normalization with moving average with now have NaNs at beginning of train set
         if norm_nans:
             self.train_index = self.train_index[n_ma - 1:]
-
-        mean = mean.dropna()
-        sigma = sigma.dropna()
 
         self.train_index_time = dfdata.index[self.train_index]
         self.test_index_time = dfdata.index[self.test_index]
