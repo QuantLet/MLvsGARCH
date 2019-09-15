@@ -13,6 +13,7 @@ from random import shuffle
 import pandas as pd
 import datetime as dt
 
+AVAILABLE_FEATURES = ['ROCP', 'log_ROCP', 'ewm_price', 'ewm_ROCP', 'ewm_log_ROCP']
 
 # data
 def load_data(path='../data/btc_1H_20160101_20190101.csv', features=None, label='labelPeakOverThreshold',
@@ -52,18 +53,35 @@ def load_data(path='../data/btc_1H_20160101_20190101.csv', features=None, label=
     if features is not None:
         for feature in features:
             feature_name = feature['name']
+            assert feature_name in AVAILABLE_FEATURES
             if feature_name == 'ROCP':
                 dffeature = dfdata[['close']].pct_change(feature['params']['timeperiod'])
-            if feature_name == 'log_ROCP':
+
+            elif feature_name == 'log_ROCP':
                 dffeature = np.log(dfdata[['close']].pct_change(feature['params']['timeperiod']) + 1)
 
+            elif feature_name == 'ewm_price':
+                dffeature = dfdata[['close']].ewm(span=feature['params']['timeperiod']).mean()
+
+            elif feature_name == 'ewm_ROCP':
+                dffeature = dfdata[['close']].pct_change(feature['params']['rocp_timeperiod'])
+                dffeature = dffeature.ewm(span=feature['params']['ewm_timeperiod']).mean()
+
+            elif feature_name == 'ewm_log_ROCP':
+                dffeature = np.log(dfdata[['close']].pct_change(feature['params']['rocp_timeperiod']) + 1)
+                dffeature = dffeature.ewm(span=feature['params']['ewm_timeperiod']).mean()
+
+            else:
+                print('%s is not available' % feature_name)
 
             feature_name = feature_name + '_' + '_'.join('{}_{}'.format(*p) for p in feature['params'].items())
             dffeature.columns = [feature_name]
             feature_names.append(feature_name)
+
             dfdata = pd.concat([dfdata, dffeature], axis=1)
 
     target = 'target'
+
     return dfdata, target, feature_names
 
 

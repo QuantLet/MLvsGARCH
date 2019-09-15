@@ -1,36 +1,71 @@
 {
-  "training_param": {
-    "n_epochs": 40,
-    "input_timesteps": 30,
-    "batch_size": 128,
-    "initial_epoch": 0,
-    "loss_function": "categorical_crossentropy",
-    "class_weight": true
-  },
-  "label_param": {
-    "log": true,
-    "lookfront": 1,
-    "uq": 0.9,
-    "lq": 0.1,
-    "binary": false,
-    "window": 24
-  },
-  "comments": "labelQuantile_cv_10_log_class_weighted",
-  "cv_param": {
-    "cv_split": 10,
-    "cv_test_start": 0.7
-  },
   "label": "labelQuantile",
+  "training_param": {
+    "loss_function": "categorical_crossentropy",
+    "initial_epoch": 0,
+    "input_timesteps": 30,
+    "n_epochs": 1,
+    "batch_size": 128,
+    "class_weight": {
+      "0": 0,
+      "1": 10000,
+      "2": 10000
+    }
+  },
   "data_param": {
-    "data_path": "../data/btc_1H_20160101_20190101.csv",
     "normalization": {
+      "n_ma": 1000,
       "sigma": null,
-      "mean": 0,
-      "n_ma": 1000
+      "mean": 0
     },
     "features": [
-      "log_ROCP_1"
+      {
+        "name": "ROCP",
+        "params": {
+          "timeperiod": 1
+        }
+      },
+      {
+        "name": "log_ROCP",
+        "params": {
+          "timeperiod": 1
+        }
+      },
+      {
+        "name": "ewm_price",
+        "params": {
+          "timeperiod": 10
+        }
+      },
+      {
+        "name": "ewm_ROCP",
+        "params": {
+          "rocp_timeperiod": 1,
+          "ewm_timeperiod": 10
+        }
+      },
+      {
+        "name": "ewm_log_ROCP",
+        "params": {
+          "rocp_timeperiod": 1,
+          "ewm_timeperiod": 10
+        }
+      }
     ],
-    "n_classes": 3
+    "n_classes": 3,
+    "data_path": "../data/btc_1H_20160101_20190101.csv"
+  },
+  "comments": "test_features",
+  "label_param": {
+    "lq": 0.1,
+    "window": 2880,
+    "binary": false,
+    "uq": 0.9,
+    "lookfront": 1,
+    "log": true
+  },
+  "cv_param": {
+    "cv_test_start": 0.7,
+    "cv_split": 10
   }
 }
