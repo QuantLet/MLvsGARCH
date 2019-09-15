@@ -15,7 +15,8 @@ import datetime as dt
 
 
 # data
-def load_data(path='../data/btc_1H_20160101_20190101.csv', features=['ROCP_1'], label = 'labelPeakOverThreshold', **kwargs_label):
+def load_data(path='../data/btc_1H_20160101_20190101.csv', features=['ROCP_1'], label='labelPeakOverThreshold',
+              **kwargs_label):
     """
     load raw data, build features and target
     :param path: str, path to data source
@@ -38,17 +39,13 @@ def load_data(path='../data/btc_1H_20160101_20190101.csv', features=['ROCP_1'], 
                               index=dfdata.index)
         dfdata['target'] = labels[target].values
 
-
-
     if label == 'labelQuantile':
         npLabels, label_returns, quantiles = labelQuantile(dfdata.close.values, **kwargs_label)
         # dflabel = pd.DataFrame(index = dfdata.index)
         dfdata['target'] = npLabels
         dfdata['returns'] = label_returns
-        dfdata['lower'] = quantiles[:,0]
-        dfdata['upper'] = quantiles[:,1]
-
-
+        dfdata['lower'] = quantiles[:, 0]
+        dfdata['upper'] = quantiles[:, 1]
 
     # load_features
     if features is not None:
@@ -69,14 +66,14 @@ def load_data(path='../data/btc_1H_20160101_20190101.csv', features=['ROCP_1'], 
 
 # label
 def labelQuantile(close,
-                  lq = 0.1,
-                  uq = 0.9,
-                  lookfront = 1,
-                  window = 30,
-                  threshold = None,
-                  log = False,
-                  fee = 0,
-                  binary = False):
+                  lq=0.1,
+                  uq=0.9,
+                  lookfront=1,
+                  window=30,
+                  threshold=None,
+                  log=False,
+                  fee=0,
+                  binary=False):
     """
 
     :param close: numpy, close price
@@ -93,9 +90,9 @@ def labelQuantile(close,
     hist_returns = np.zeros(len(close), dtype=float)
 
     if log:
-        hist_returns[1:] = np.log(close[1:]/close[0:-1])
+        hist_returns[1:] = np.log(close[1:] / close[0:-1])
     else:
-        hist_returns[1:] = close[1:]/close[0:-1] - 1
+        hist_returns[1:] = close[1:] / close[0:-1] - 1
 
     labels = np.zeros(len(close), dtype=int)
     returns = np.zeros(len(close), dtype=float)
@@ -104,7 +101,7 @@ def labelQuantile(close,
     upper_q = np.zeros(len(close), dtype=float)
 
     for t in range(window, len(close) - lookfront):
-        data_w = hist_returns[t-window : t]
+        data_w = hist_returns[t - window: t]
 
         if threshold is not None:
             losses = data_w[data_w < -threshold]
@@ -112,10 +109,10 @@ def labelQuantile(close,
             lower_q_t = np.quantile(losses, lq)
             upper_q_t = np.quantile(gains, uq)
         else:
-            lower_q_t = np.quantile(data_w, lq) # rolling = returns.rolling(window) q10 = rolling.quantile(0.1)
+            lower_q_t = np.quantile(data_w, lq)  # rolling = returns.rolling(window) q10 = rolling.quantile(0.1)
             upper_q_t = np.quantile(data_w, uq)
 
-        for i in range(1, lookfront +1):
+        for i in range(1, lookfront + 1):
             ratio = hist_returns[t + i]
             if ratio <= lower_q_t:
                 if binary:
@@ -131,18 +128,17 @@ def labelQuantile(close,
         lower_q[t] = lower_q_t
         upper_q[t] = upper_q_t
 
-    quantiles = np.concatenate([lower_q.reshape(-1,1),
-                                upper_q.reshape(-1,1)],
-                               axis = 1)
+    quantiles = np.concatenate([lower_q.reshape(-1, 1),
+                                upper_q.reshape(-1, 1)],
+                               axis=1)
 
     return labels, returns, quantiles
 
 
-def labelQuantileDF(close, lq = 0.1, up = 0.9, lookfront = 1, window = 30, log = False):
+def labelQuantileDF(close, lq=0.1, up=0.9, lookfront=1, window=30, log=False):
     """
     close: pd.dataframe
     """
-
 
     if log:
         returns = np.log(close).diff()
@@ -152,10 +148,10 @@ def labelQuantileDF(close, lq = 0.1, up = 0.9, lookfront = 1, window = 30, log =
     lowerband = returns.expanding(window).quantile(lq)
     upperband = returns.expanding(window).quantile(up)
 
-    quantiles = pd.concat([lowerband, upperband], axis = 1)
+    quantiles = pd.concat([lowerband, upperband], axis=1)
     quantiles.columns = ['lower', 'upper']
 
-    labels = pd.DataFrame(index = returns.index, columns = ['label'])
+    labels = pd.DataFrame(index=returns.index, columns=['label'])
     labels['label'] = 0
 
     labels.loc[(returns <= lowerband).values.reshape(-1), 'label'] = 2
@@ -163,13 +159,14 @@ def labelQuantileDF(close, lq = 0.1, up = 0.9, lookfront = 1, window = 30, log =
 
     return labels, quantiles
 
+
 def labelPeakOverThreshold(close,
                            lowerBand=-0.05,
                            upperBand=0.05,
                            lookfront=5,
                            binary=False,
                            log=False,
-                           fee = 0):
+                           fee=0):
     labels = np.zeros(len(close), dtype=int)
     returns = np.zeros(len(close), dtype=float)
     for t in range(len(close) - lookfront):
@@ -187,7 +184,7 @@ def labelPeakOverThreshold(close,
             elif ratio >= upperBand_i and enter:
                 labels[t] = 1
                 break
-        returns[t] = (ratio + 1) * (1 - fee)**2 - 1
+        returns[t] = (ratio + 1) * (1 - fee) ** 2 - 1
     return labels
 
 
@@ -323,7 +320,7 @@ class Model():
         print('[Model] Training Completed. Model saved as %s' % save_fname)
         timer.stop()
 
-    def predict(self, data, input_timesteps=30, n_classes=3, loss_function=None, on_train = False):
+    def predict(self, data, input_timesteps=30, n_classes=3, loss_function=None, on_train=False):
         x_test, y_test, date_test = data.get_data(input_timesteps=input_timesteps,
                                                   n_classes=n_classes,
                                                   loss_function=loss_function,
@@ -388,6 +385,7 @@ class DataLoader():
         self.label_test = dfdata.get(target).values[self.test_index]
 
         self.len_train_windows = None
+
         self.class_weight = {}
         self.class_weight_count(class_weight)
         print('class_weight', self.class_weight)
@@ -423,22 +421,33 @@ class DataLoader():
             print('LABELS:')
             for i in range(len(labels)):
                 print('{}: {:.2f}%'.format(labels[i], n_label[i] / np.sum(n_label) * 100))
-        print('Training from %s to %s' % (list(self.dfdata_train.index.astype(str))[0],
+        print('Training set from %s to %s' % (list(self.dfdata_train.index.astype(str))[0],
                                           list(self.dfdata_train.index.astype(str))[-1]))
 
     def class_weight_count(self, class_weight=None):
-        if class_weight:
-            self.class_weight = self.class_weight
-        cnt = Counter(self.label_train)
-        for key, value in cnt.items():
+        if isinstance(class_weight, (dict)):
+            for k in class_weight.keys():
+                self.class_weight[int(k)] = class_weight[k]
+        else:
             if class_weight:
-                self.class_weight[key] = self.len_train / value
-            else:
-                self.class_weight[key] = 1
+                self.class_weight = self.class_weight
+            cnt = Counter(self.label_train)
+            for key, value in cnt.items():
+                if class_weight:
+                    self.class_weight[key] = self.len_train / value
+                else:
+                    self.class_weight[key] = 1
 
-    def get_data(self, input_timesteps=30, n_classes=3, loss_function=None, train = False):
-        """Return a generator of training data from filename on given list of cols split for train/test"""
-        i = self.max_lookback
+    def get_data(self, input_timesteps=30, n_classes=3, loss_function=None, train=False):
+        """
+        Return a generator of training data from filename on given list of cols split for train/test
+
+        :param input_timesteps: int, number of input time steps to use for one prediction
+        :param n_classes: int, number of classes in the output
+        :param loss_function: optional
+        :param train: boolean, return training data or testing data
+        :return: x_bacth, y_batch, t_batch
+        """
 
         if train:
             len_data = self.len_train
@@ -446,7 +455,6 @@ class DataLoader():
         else:
             len_data = self.len_test
             data = self.dfdata_test
-
 
         x_batch = []
         y_batch = []
@@ -470,9 +478,7 @@ class DataLoader():
         if loss_function == 'binary_crossentropy':
             y_batch = np.array([y_batch[:, 1]]).T
 
-
         return x_batch, y_batch, t_batch
-
 
     def generate_train_batch_random(self, batch_size, train=True,
                                     input_timesteps=30, loss_function=None, n_classes=3):
@@ -570,7 +576,7 @@ def plot_roc_curve(y_test, preds, figure_dir, fig_name, create_plot=True, legend
 
     roc_auc = metrics.auc(fpr, tpr)
 
-    plt.rcParams["figure.figsize"] = (10,10)
+    plt.rcParams["figure.figsize"] = (10, 10)
     if plot_type == 'roc':
         plt.plot(fpr, tpr, color=color, label='AUC = %0.2f ' % roc_auc + 'for {}'.format(class_i) + label_append)
         plt.plot([0, 1], [0, 1], 'r--')
@@ -653,13 +659,11 @@ def train_predict(dfdata, target,  # data_path='../data/btc_1H_20160101_20190101
                   input_timesteps=30,
                   n_classes=3,
                   lookfront=1,
-                  normalization={'mean': None, 'sigma': None, 'n_ma': 100}, training=True):
+                  normalization={'mean': None, 'sigma': None, 'n_ma': 100},
+                  training=True):
     """
     main function to train a lstm neural network on one training set
     and predict on corresponding validation set.
-
-
-
 
     """
     if model is None:
@@ -673,6 +677,7 @@ def train_predict(dfdata, target,  # data_path='../data/btc_1H_20160101_20190101
                       lookfront=lookfront, class_weight=class_weight,
                       cv_split_i=cv_split_i, cv_split=cv_split, cv_test_start=cv_test_start,
                       normalization=normalization)
+
     if class_weight:
         cweights = data.class_weight
     else:
@@ -697,38 +702,39 @@ def train_predict(dfdata, target,  # data_path='../data/btc_1H_20160101_20190101
             use_multiprocessing=False,
             class_weight=cweights
         )
-        # Predict on correspond validation set
+        # Predict on corresponding validation set
         predictions, y, date = model.predict(data,
-                                                       input_timesteps=input_timesteps,
-                                                       n_classes=n_classes,
-                                                       loss_function=loss_function)
+                                             input_timesteps=input_timesteps,
+                                             n_classes=n_classes,
+                                             loss_function=loss_function)
 
     else:
-        # Predict on correspond training set
+        # Predict on corresponding training set
         predictions, y, date = model.predict(data,
-                                                       input_timesteps=input_timesteps,
-                                                       n_classes=n_classes,
-                                                       loss_function=loss_function,
-                                                       on_train = True)
+                                             input_timesteps=input_timesteps,
+                                             n_classes=n_classes,
+                                             loss_function=loss_function,
+                                             on_train=True)
 
     return predictions, model, y, data, date, target
 
 
 # model selection methods
-def roc_curve(y_test, preds, figure_dir, fig_name, create_plot=True, legend=True, color='b', plot_type='roc', class_i=1, label_append=''):
+def roc_curve(y_test, preds, figure_dir, fig_name, create_plot=True, legend=True, color='b', plot_type='roc', class_i=1,
+              label_append=''):
     # calculate the fpr and tpr for all thresholds of the classification
     fpr, tpr, threshold = metrics.roc_curve(y_test, preds, pos_label=1)
     roc_auc = metrics.auc(fpr, tpr)
     # plt.title('Receiver Operating Characteristic')
     if plot_type == 'roc':
         plt.plot(fpr, tpr, color=color, label='AUC = %0.2f ' % roc_auc + 'for {}'.format(class_i) + label_append)
-        plt.plot([0, 1], [0, 1],'r--')
+        plt.plot([0, 1], [0, 1], 'r--')
         plt.ylabel('True Positive Rate')
         plt.xlabel('False Positive Rate')
     plt.xlim([0, 1])
     plt.ylim([0, 1])
     if legend:
-        plt.legend(loc = 'lower right')
+        plt.legend(loc='lower right')
 
     if create_plot:
         plt.savefig('{}/{}-ROC.svg'.format(figure_dir, fig_name))
@@ -776,7 +782,6 @@ def plot_selection(dir_, plot_type):
                     roc_curve(np.asarray(y_test_i).T[1, :], predictions_i[:, 1], None, 'all', create_plot=False,
                               color=['b', 'r', 'g'][class_0], class_i=class_0, label_append=str(class_1))
 
-
     save_dir = dir_ + '/selection/'
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
@@ -784,7 +789,7 @@ def plot_selection(dir_, plot_type):
     plt.savefig('{}{}.png'.format(save_dir, plot_type))
 
 
-def get_total_pred(dir_='./saved_models/12072019-143851/', epoch_number='9', file_name = 'total'):
+def get_total_pred(dir_='./saved_models/12072019-143851/', epoch_number='9', file_name='total'):
     cv = [int(d) for d in os.listdir(dir_) if d.isdigit()]
     cv.sort()
     n_epochs = int(list(filter(lambda x: 'prediction' in x, os.listdir(dir_ + '/' + str(cv[0]))))[0].split('-')[1])
@@ -802,8 +807,7 @@ def get_total_pred(dir_='./saved_models/12072019-143851/', epoch_number='9', fil
     return total_pred
 
 
-def get_total_roc_curve(dir_='./saved_models/12072019-143851/', epoch_number='9', fig_name = 'Total', legend = False):
-
+def get_total_roc_curve(dir_='./saved_models/12072019-143851/', epoch_number='9', fig_name='Total', legend=False):
     '''cv = [int(d) for d in os.listdir(dir_) if d.isdigit()]
 
     cv.sort()
@@ -858,4 +862,4 @@ def get_total_roc_curve(dir_='./saved_models/12072019-143851/', epoch_number='9'
             plot_roc_curve(np.asarray(y_test_i).T[1, :], predictions_i[:, 1], dir_, fig_name + '_one_vs_one',
                            create_plot=(class_i == (n_classes - 1)),
                            color=['b', 'r', 'g'][class_0], class_i=class_0, label_append=str(class_1),
-                           legend = legend)
+                           legend=legend)

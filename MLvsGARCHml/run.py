@@ -2,7 +2,6 @@ from core import Model, plot_performance, load_data, train_predict, get_total_ro
 import json, os
 import datetime as dt
 from keras import backend as keras_backend
-import pickle
 
 def run(config,
         classification=True,
@@ -30,7 +29,7 @@ def run(config,
 
     global_dates = {}
 
-    if training == True:
+    if training:
         for cv_split_i in range(cv_param['cv_split']):
             model = None
             keras_backend.clear_session()
