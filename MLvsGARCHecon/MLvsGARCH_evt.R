@@ -19,12 +19,45 @@ var.normal = function(probs, mean, sd)
   return(var)
 }
 
+# VaR for a Student t distribution
+var.student = function(probs, mean, sd, df)
+{
+  scaling.factor = sqrt((df-2) / df)
+  var = mean + sd * (scaling.factor * qt(p = probs, df = df) )
+  return(var)
+}
+
 # VaR for a Generalized Pareto Distribution (GDP)
 var.gpd = function(probs, threshold, scale, shape, n, Nu)
 {
   var = threshold + (scale / shape) * (((n / Nu) * (1 - probs)) ^ (-shape) - 1)
   return(var)
 }
+
+# ES for a normal distribution
+es.normal = function(probs, mean, sd)
+{
+  es = mean + sd * (dnorm(x=qnorm(p=probs)) / (1-probs))
+  return(es)
+}
+
+# ES for a Student t distribution
+es.student = function(probs, mean, sd, df)
+{
+  scaling.factor = sqrt((df-2)/df)
+  factor1 = dt(x=qt(p=probs, df=df), df=df) / (1-probs)
+  factor2 = (df + (qt(p=probs, df=df))^2 ) / (df-1)
+  es = mean + sd * scaling.factor * factor1 * factor2
+  return(es)
+}
+
+# ES for a GPD
+es.gpd = function(var, threshold, scale, shape)
+{
+  es = var / (1-shape) + (scale - shape * threshold) / (1-shape)
+  return(es)
+}
+
 
 fit_pred = function() {
   fitted.model = garchFit(
@@ -73,16 +106,22 @@ fit_pred = function() {
     EVTmodel.zq = var.gpd(q, EVTmodel.threshold, EVTmodel.scale, EVTmodel.shape, n, Nu)
     
     # Predict return value
-    predicted_value_mean = model.mean + model.sd * EVTmodel.zq
-    predicted_norm = var.normal(probs = q,
+    EVTmodel.var = model.mean + model.sd * EVTmodel.zq
+    model.var = var.normal(probs = q,
                                 mean = model.mean,
                                 sd = model.sd)
-    
+    # Calculate the Expected Shortfall
+    model.es = es.normal(probs=q, mean=model.mean, sd=model.sd)
+    EVTmodel.es = model.mean + model.sd * es.gpd(var=EVTmodel.zq,
+                                                threshold=EVTmodel.threshold,
+                                                scale=EVTmodel.scale,
+                                                shape=EVTmodel.shape)
+
     # predicted_value = model.sd * EVTmodel.zq
     #prediction[count, ((j-1) * 2 + 4)] = predicted_value_mean
     #prediction[count, ((j-1) * 2 + 5)] = predicted_norm
     
-    q_data = c(EVTmodel.threshold, predicted_value_mean, predicted_norm, model.mean , model.sd, EVTmodel.zq)
+    q_data = c(EVTmodel.threshold, EVTmodel.var, EVTmodel.es, model.var, model.es, model.mean , model.sd, EVTmodel.zq)
     
     prediction_i = c(prediction_i, q_data)
   }
@@ -171,7 +210,9 @@ for (q in c('10%', '5%', '2.5%', '1%')){
   cn = c(cn, 
          paste0("threshold_", q),
          paste0("evt_var_", q),
+         paste0("evt_es_", q),
          paste0("var_", q),
+          paste0("es_", q),
          paste0("mean_", q),
          paste0("sd_", q),
          paste0("zq_", q)
