@@ -13,7 +13,7 @@ source("./definition.R")
 day = 24
 month = day*30
 
-TEST = TRUE
+TEST = FALSE
 
 threshold = 
 
@@ -85,7 +85,7 @@ fit_pred = function() {
                         shape = EVTmodel.shape)
   
   
-  print(c(model.proba, EVTmodel.proba))
+  # print(c(model.proba, EVTmodel.proba))
   # predicted_value = model.sd * EVTmodel.zq
   #prediction[count, ((j-1) * 2 + 4)] = predicted_value_mean
   #prediction[count, ((j-1) * 2 + 5)] = predicted_norm
@@ -180,8 +180,10 @@ for (q in qs){
          paste0("threshold_", q),
          paste0("evt_var_", q),
          paste0("evt_es_", q),
+         paste0("evt_proba_", q),
          paste0("var_", q),
          paste0("es_", q),
+         paste0("proba_", q),
          paste0("mean_", q),
          paste0("sd_", q),
          paste0("zq_", q)
@@ -195,8 +197,5 @@ colnames(df) = c(
 
 rownames(df) = dates
 
-
 ######### SAVE
-if (!TEST) {
-  write.csv(df, paste0(save_path, "_prediction_10per_proba.csv"), row.names = TRUE)
-}
+write.csv(df, paste0(save_path, "_prediction_10per_proba.csv"), row.names = TRUE)
