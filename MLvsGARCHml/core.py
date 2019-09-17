@@ -407,6 +407,7 @@ class DataLoader():
         mean = normalization['mean']
         sigma = normalization['sigma']
         n_ma = normalization['n_ma']
+        norm_nans = False
         if mean is None:
             norm_nans = True
             mean = dfdata[self.feature_cols].rolling(n_ma).mean()
