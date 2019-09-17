@@ -7,57 +7,13 @@ library(POT)
 library(ismev)
 library(fGarch)
 library(MLmetrics)
+source("./definition.R")
 
 # Constants
 day = 24
 month = day*30
 
-# VaR for a Generalized Pareto Distribution (GDP)
-var.normal = function(probs, mean, sd)
-{
-  var = mean + sd * qnorm(p = probs)
-  return(var)
-}
-
-# VaR for a Student t distribution
-var.student = function(probs, mean, sd, df)
-{
-  scaling.factor = sqrt((df-2) / df)
-  var = mean + sd * (scaling.factor * qt(p = probs, df = df) )
-  return(var)
-}
-
-# VaR for a Generalized Pareto Distribution (GDP)
-var.gpd = function(probs, threshold, scale, shape, n, Nu)
-{
-  var = threshold + (scale / shape) * (((n / Nu) * (1 - probs)) ^ (-shape) - 1)
-  return(var)
-}
-
-# ES for a normal distribution
-es.normal = function(probs, mean, sd)
-{
-  es = mean + sd * (dnorm(x=qnorm(p=probs)) / (1-probs))
-  return(es)
-}
-
-# ES for a Student t distribution
-es.student = function(probs, mean, sd, df)
-{
-  scaling.factor = sqrt((df-2)/df)
-  factor1 = dt(x=qt(p=probs, df=df), df=df) / (1-probs)
-  factor2 = (df + (qt(p=probs, df=df))^2 ) / (df-1)
-  es = mean + sd * scaling.factor * factor1 * factor2
-  return(es)
-}
-
-# ES for a GPD
-es.gpd = function(var, threshold, scale, shape)
-{
-  es = var / (1-shape) + (scale - shape * threshold) / (1-shape)
-  return(es)
-}
-
+TEST = FALSE
 
 fit_pred = function() {
   fitted.model = garchFit(
@@ -155,9 +111,8 @@ dates = rownames(dataset)
 # Split data
 test_size = (length(dataset) - window_size)
 qs = c(0.90, 0.95, 0.975, 0.99)
-prediction = matrix(nrow = test_size, ncol = (3 + (6 * length(qs))))
+prediction = matrix(nrow = test_size, ncol = (3 + (8 * length(qs))))
 
-TEST = FALSE
 
 if (TEST){
   test_size = 20
@@ -212,7 +167,7 @@ for (q in c('10%', '5%', '2.5%', '1%')){
          paste0("evt_var_", q),
          paste0("evt_es_", q),
          paste0("var_", q),
-          paste0("es_", q),
+         paste0("es_", q),
          paste0("mean_", q),
          paste0("sd_", q),
          paste0("zq_", q)
