@@ -96,8 +96,6 @@ dataset = data.frame("close" = dataset$close)
 rownames(dataset) = dates
 dataset <- timeSeries::as.timeSeries(dataset, FinCenter = "GMT")
 
-# Forget about 2016
-dataset = dataset[rownames(dataset) >= '2017-05-01 00:00:00', 1]
 
 # Fit model on one month history
 window_size = 4 * month
@@ -105,8 +103,15 @@ q_fit = 0.1  # fit to 10% of worst outcomes
 
 # Convert price series to loss series
 dataset = na.omit(diff(log(dataset)))
+
+# Forget about 2016
+dataset = dataset[rownames(dataset) >= '2017-05-01 00:00:00', 1]
+
+
 length.dataset = length(dataset[, 1])
 dates = rownames(dataset)
+
+
 
 # Split data
 test_size = (length(dataset) - window_size)
