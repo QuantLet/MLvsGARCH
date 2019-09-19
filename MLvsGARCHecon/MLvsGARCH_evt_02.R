@@ -13,7 +13,7 @@ source("./definition.R")
 day = 24
 month = day*30
 
-TEST = FALSE
+TEST = TRUE
 
 fit_pred = function() {
   fitted.model = garchFit(
@@ -24,6 +24,8 @@ fit_pred = function() {
   )
   # Get current residuals
   model.residuals  = fGarch::residuals(fitted.model , standardize = TRUE)
+  model.vol  = volatility(fitted.model)
+  model.coef = coef(fitted.model)
   cvol = model.vol[n]
   cres = model.residuals[n]
   ma1 = model.coef['ma1']
