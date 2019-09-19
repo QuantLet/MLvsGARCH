@@ -15,8 +15,6 @@ month = day*30
 
 TEST = FALSE
 
-threshold = 
-
 fit_pred = function() {
   fitted.model = garchFit(
     formula = ~ arma(3, 1) + garch(1, 2),
@@ -24,6 +22,14 @@ fit_pred = function() {
     cond.dist = "QMLE",
     trace = FALSE
   )
+  # Get current residuals
+  model.residuals  = fGarch::residuals(fitted.model , standardize = TRUE)
+  cvol = model.vol[n]
+  cres = model.residuals[n]
+  ma1 = model.coef['ma1']
+  
+  model.ma = ma1 * cvol * cres
+  
   # Predict next value
   model.forecast = fGarch::predict(object = fitted.model, n.ahead = 1)
   model.mean = model.forecast$meanForecast #serie
@@ -78,8 +84,8 @@ fit_pred = function() {
                                                shape=EVTmodel.shape)
   
   # Calculate proba
-  model.proba = pnorm(( lower[1] - model.mean ) / model.sd)
-  EVTmodel.proba = pgpd(( lower[1] - model.mean ) / model.sd,
+  model.proba = pnorm(( lower[1] - model.mean - model.ma) / model.sd)
+  EVTmodel.proba = pgpd(( lower[1] - model.mean - model.ma) / model.sd,
                         loc = EVTmodel.threshold,
                         scale = EVTmodel.scale,
                         shape = EVTmodel.shape)
@@ -117,7 +123,7 @@ dataset = cbind(dataset, c(NaN, diff(log(dataset$close))))
 colnames(dataset) = c("close","lower", "returns")
 
 # Forget about 2016
-dataset = dataset[rownames(dataset) >= '2017-05-01 00:00:00', c("returns", "lower")]
+dataset = dataset[rownames(dataset) >= '2017-08-01 00:00:00', c("returns", "lower")]
 
 length.dataset = length(dataset)
 dates = rownames(dataset)
