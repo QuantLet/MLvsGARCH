@@ -87,6 +87,75 @@ def load_data(path='../data/btc_1H_20160101_20190101.csv', features=None, label=
 
 
 # label
+def labelQuantileOld(close,
+                  lq=0.1,
+                  uq=0.9,
+                  lookfront=1,
+                  window=30,
+                  threshold=None,
+                  log=False,
+                  fee=0,
+                  binary=False):
+    """
+
+    :param close: numpy, close price
+    :param lq: float, lower quantile
+    :param uq: float, upper quantile
+    :param lookfront: int, horizon forecast
+    :param window: int, rolling window size for computing the quantile
+    :param log: boolean, log scale or simple
+    :param fee: float, fee
+    :param binary: boolean, output is two classes or three classes
+    :return:
+    """
+
+    hist_returns = np.zeros(len(close), dtype=float)
+
+    if log:
+        hist_returns[1:] = np.log(close[1:] / close[0:-1])
+    else:
+        hist_returns[1:] = close[1:] / close[0:-1] - 1
+
+    labels = np.zeros(len(close), dtype=int)
+    returns = np.zeros(len(close), dtype=float)
+
+    lower_q = np.zeros(len(close), dtype=float)
+    upper_q = np.zeros(len(close), dtype=float)
+
+    for t in range(window, len(close) - lookfront):
+        data_w = hist_returns[t - window: t]
+
+        if threshold is not None:
+            losses = data_w[data_w < -threshold]
+            gains = data_w[data_w >= threshold]
+            lower_q_t = np.quantile(losses, lq)
+            upper_q_t = np.quantile(gains, uq)
+        else:
+            lower_q_t = np.quantile(data_w, lq)  # rolling = returns.rolling(window) q10 = rolling.quantile(0.1)
+            upper_q_t = np.quantile(data_w, uq)
+
+        for i in range(1, lookfront + 1):
+            ratio = hist_returns[t + i]
+            if ratio <= lower_q_t:
+                if binary:
+                    labels[t] = 1
+                else:
+                    labels[t] = 2
+                break
+            elif ratio >= upper_q_t:
+                labels[t] = 1
+                break
+
+        returns[t] = hist_returns[t + i]
+        lower_q[t] = lower_q_t
+        upper_q[t] = upper_q_t
+
+    quantiles = np.concatenate([lower_q.reshape(-1, 1),
+                                upper_q.reshape(-1, 1)],
+                               axis=1)
+
+    return labels, returns, quantiles
+
 def labelQuantile(close,
                   lq=0.1,
                   uq=0.9,
@@ -153,6 +222,10 @@ def labelQuantile(close,
     quantiles = np.concatenate([lower_q.reshape(-1, 1),
                                 upper_q.reshape(-1, 1)],
                                axis=1)
+
+    quantiles[:window, 0] = lower_q[window]
+    quantiles[:window, 1] = upper_q[window]
+    returns[:window] = hist_returns[:window]
 
     return labels, returns, quantiles
 
