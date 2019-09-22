@@ -9,11 +9,13 @@ library(fGarch)
 library(MLmetrics)
 source("./definition.R")
 
+model_type = "new"
+TEST = TRUE
+
 # Constants
 day = 24
 month = day*30
 
-TEST = TRUE
 
 fit_pred = function() {
   fitted.model = garchFit(
@@ -86,11 +88,21 @@ fit_pred = function() {
                                                shape=EVTmodel.shape)
   
   # Calculate proba
-  model.proba = pnorm(( lower[1] - model.mean - model.ma) / model.sd)
-  EVTmodel.proba = pgpd(( lower[1] - model.mean - model.ma) / model.sd,
-                        loc = EVTmodel.threshold,
-                        scale = EVTmodel.scale,
-                        shape = EVTmodel.shape)
+  if (model_type == "new"){
+    model.proba = pnorm(( lower[1] - model.mean - model.ma) / model.sd)
+    EVTmodel.proba = pgpd(( lower[1] - model.mean - model.ma) / model.sd,
+                          loc = EVTmodel.threshold,
+                          scale = EVTmodel.scale,
+                          shape = EVTmodel.shape)
+  }
+  if (model_type == "or"){
+    model.proba = pnorm(( lower[1] - model.mean) / model.sd)
+    EVTmodel.proba = pgpd(( lower[1] - model.mean) / model.sd,
+                          loc = EVTmodel.threshold,
+                          scale = EVTmodel.scale,
+                          shape = EVTmodel.shape)
+  }
+    
   
   
   # print(c(model.proba, EVTmodel.proba))
@@ -126,12 +138,11 @@ colnames(dataset) = c("close","lower", "returns")
 
 # Forget about 2016
 dataset = dataset[rownames(dataset) >= '2017-08-01 00:00:00', c("returns", "lower")]
-
-length.dataset = length(dataset)
+length.dataset = nrow(dataset)
 dates = rownames(dataset)
 
 # Split data
-test_size = (length(dataset) - window_size)
+test_size = length.dataset - window_size
 qs = c(0.90)
 prediction = matrix(nrow = test_size, ncol = (3 + (10 * length(qs))))
 
@@ -145,10 +156,8 @@ time <- Sys.time()
 save_path = gsub(' ', '', gsub('-', '', gsub(':', '', time)))
 for (i in (window_size + 1):(window_size + test_size)) {
   if (i %% 1000 == 0) {
-    print((length(dataset) - i))
-    print(prediction[(i - window_size - 1), ])
+    print(paste("Saving prediction at step", i))
     write.csv(prediction, paste0(save_path, "prediction_online_first.csv"), row.names = FALSE)
-    print(head(prediction))
   }
   n = window_size
   
@@ -206,4 +215,10 @@ colnames(df) = c(
 rownames(df) = dates
 
 ######### SAVE
-write.csv(df, paste0(save_path, "_prediction_10per_proba.csv"), row.names = TRUE)
+write.csv(df, paste0(
+  paste0('./saved_models/',
+         save_path),
+  paste0(model_type, 
+         "_prediction_10per_proba.csv")
+  ),
+  row.names = TRUE)
