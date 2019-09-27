@@ -10,7 +10,7 @@ library(MLmetrics)
 source("./definition.R")
 
 model_type = "new"
-TEST = TRUE
+TEST = FALSE
 
 # Constants
 day = 24
@@ -25,14 +25,14 @@ fit_pred = function() {
     trace = FALSE
   )
   # Get current residuals
-  model.residuals  = fGarch::residuals(fitted.model , standardize = TRUE)
+  model.residuals  = fGarch::residuals(fitted.model , standardize = FALSE)  # TRUE
   model.vol  = volatility(fitted.model)
   model.coef = coef(fitted.model)
   cvol = model.vol[n]
   cres = model.residuals[n]
   ma1 = model.coef['ma1']
   
-  model.ma = ma1 * cvol * cres
+  model.ma = ma1 * cres # *cvol
   
   # Predict next value
   model.forecast = fGarch::predict(object = fitted.model, n.ahead = 1)
@@ -52,13 +52,14 @@ fit_pred = function() {
   prediction_i = c(date, next.return[1], return.sd[1])
   
   
-  k = length(stdres) * (1 - q_fit)
+  #k = length(stdres) * (1 - q_fit)
+  k = length(stdres) * q_fit
   EVTmodel.threshold = (sort(stdres, decreasing = TRUE))[(k + 1)]
+
   # Fit GPD to residuals
   EVTmodel.fit = gpd.fit(
     xdat = stdres,
     threshold = EVTmodel.threshold,
-    npy = NULL,
     show = FALSE
   )
   # Extract scale and shape parameter estimates
@@ -90,17 +91,21 @@ fit_pred = function() {
   # Calculate proba
   if (model_type == "new"){
     model.proba = pnorm(( lower[1] - model.mean - model.ma) / model.sd)
+    model.proba = 1 -  model.proba
     EVTmodel.proba = pgpd(( lower[1] - model.mean - model.ma) / model.sd,
                           loc = EVTmodel.threshold,
                           scale = EVTmodel.scale,
                           shape = EVTmodel.shape)
+    EVTmodel.proba = 1 - EVTmodel.proba
   }
   if (model_type == "or"){
     model.proba = pnorm(( lower[1] - model.mean) / model.sd)
+    model.proba = 1 - model.proba
     EVTmodel.proba = pgpd(( lower[1] - model.mean) / model.sd,
                           loc = EVTmodel.threshold,
                           scale = EVTmodel.scale,
                           shape = EVTmodel.shape)
+    EVTmodel.proba = 1 - EVTmodel.proba
   }
     
   
@@ -120,7 +125,7 @@ fit_pred = function() {
 }
 
 # Load variables and helper functions
-dset = "../data/btc_1H_lower_20160101_20190101"
+dset = "../data/new_btc_1H_lower_20160101_20190101"
 dset.name = paste("./", dset, ".csv", sep = "")
 dataset <- read.csv(dset.name, header = TRUE)
 dates = dataset$X
@@ -132,17 +137,21 @@ dataset <- timeSeries::as.timeSeries(dataset, FinCenter = "GMT")
 window_size = 4 * month
 q_fit = 0.1  # fit to 10% of worst outcomes
 
-# Convert price series to returns
-dataset = cbind(dataset, c(NaN, diff(log(dataset$close))))
+# Convert price series to losses and lower (negative) threshold to a positive threshold
+dataset = cbind(dataset, c(NaN, - diff(log(dataset$close))))
 colnames(dataset) = c("close","lower", "returns")
+dataset$lower = - dataset$lower
 
 # Forget about 2016
-dataset = dataset[rownames(dataset) >= '2017-08-01 00:00:00', c("returns", "lower")]
+dataset = dataset[rownames(dataset) >= '2018-08-01 00:00:00', c("returns", "lower")]
+dataset = dataset[rownames(dataset) <= '2018-12-04 00:00:00', c("returns", "lower")]
+
 length.dataset = nrow(dataset)
 dates = rownames(dataset)
 
 # Split data
 test_size = length.dataset - window_size
+
 qs = c(0.90)
 prediction = matrix(nrow = test_size, ncol = (3 + (10 * length(qs))))
 
@@ -155,6 +164,9 @@ count = 1
 time <- Sys.time()
 save_path = gsub(' ', '', gsub('-', '', gsub(':', '', time)))
 for (i in (window_size + 1):(window_size + test_size)) {
+  if ((test_size + window_size - i) %% 250 == 0){
+    print(paste0("Steps to go: ", test_size + window_size - i))
+  }
   if (i %% 1000 == 0) {
     print(paste("Saving prediction at step", i))
     write.csv(prediction, paste0(save_path, "prediction_online_first.csv"), row.names = FALSE)
