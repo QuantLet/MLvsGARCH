@@ -9,7 +9,7 @@ library(fGarch)
 library(MLmetrics)
 source("./definition.R")
 
-model_type = "new"
+model_type = "or"
 TEST = FALSE
 
 # Constants
@@ -139,7 +139,7 @@ q_fit = 0.1  # fit to 10% of worst outcomes
 
 # Convert price series to losses and lower (negative) threshold to a positive threshold
 dataset = cbind(dataset, c(NaN, - diff(log(dataset$close))))
-colnames(dataset) = c("close","lower", "returns")
+colnames(dataset) = c("close", "lower", "returns")
 dataset$lower = - dataset$lower
 
 # Forget about 2016
@@ -177,7 +177,7 @@ for (i in (window_size + 1):(window_size + test_size)) {
   # Normalize entire dataset to have variance one
   return.sd = apply(data.series, 2, sd)
   data.series = data.series$returns / return.sd
-  next.return = dataset[i] / return.sd
+  next.return = dataset[i, "returns"]
   lower = dataset[i - 1, "lower"]/ return.sd
   date = dates[i]
   # Fit model and get prediction
@@ -227,10 +227,20 @@ colnames(df) = c(
 rownames(df) = dates
 
 ######### SAVE
-write.csv(df, paste0(
-  paste0('./saved_models/',
-         save_path),
-  paste0(model_type, 
-         "_prediction_10per_proba.csv")
+if (TEST){
+  write.csv(df, paste0(
+    paste0('./',
+           save_path),
+    paste0(model_type, 
+           "_prediction_10per_proba_TEST.csv")
   ),
   row.names = TRUE)
+} else {
+  write.csv(df, paste0(
+    paste0('./saved_models/',
+           save_path),
+    paste0(model_type, 
+           "_prediction_10per_proba.csv")
+  ),
+  row.names = TRUE)
+}

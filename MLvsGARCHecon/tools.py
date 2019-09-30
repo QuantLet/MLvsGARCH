@@ -5,8 +5,6 @@ import datetime as dt
 def load_econ_pred(path='./saved_models/20190922155918or_prediction_10per_proba.csv', qs = [0.9]):
     df = pd.read_csv(path, index_col = 0)
     df.index = pd.to_datetime(df.index)
-    # reindex by close time
-    df.index = df.index + dt.timedelta(hours = 1)
 
     # Compute var - u and var breaks
     q_columns = ['threshold', 'evt_var', 'evt_es', 'var', 'es', 'mean', 'zq']
