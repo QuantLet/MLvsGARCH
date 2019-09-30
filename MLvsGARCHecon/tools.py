@@ -16,7 +16,12 @@ def load_econ_pred(path='./saved_models/20190922155918or_prediction_10per_proba.
     df_columns = [c for cl in df_columns for c in cl]
 
     for c in df_columns + ['std_losses']:
-        df.loc[:, c] = df.loc[:, c] * df['norm_sd']
-    df.columns = ['returns'] + list(df.columns)[1:]
+        df.loc[:, c] = - df.loc[:, c] * df['norm_sd']
 
+    for c in ['sd_' + str(q) for q in qs]:
+        df.loc[:, c] = df.loc[:, c] * df['norm_sd']
+
+    df.columns = ['returns'] + list(df.columns)[1:]
+    
     return df
+
