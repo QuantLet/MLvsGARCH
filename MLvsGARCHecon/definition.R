@@ -43,3 +43,11 @@ es.gpd = function(var, threshold, scale, shape)
   es = var / (1-shape) + (scale - shape * threshold) / (1-shape)
   return(es)
 }
+
+
+# Tail proba for a GPD
+tail.gpd = function(x, threshold, scale, shape, n, Nu)
+{
+  proba = Nu/n * ( 1 + shape * (x - threshold)/scale )^(-1/shape)
+  return(proba)
+}

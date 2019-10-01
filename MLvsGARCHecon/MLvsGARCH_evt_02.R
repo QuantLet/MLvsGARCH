@@ -9,7 +9,6 @@ library(fGarch)
 library(MLmetrics)
 source("./definition.R")
 
-model_type = "or"
 TEST = FALSE
 
 # Constants
@@ -18,44 +17,24 @@ month = day*30
 
 
 fit_pred = function() {
+  prediction_i = c(date, next.return[1], return.sd[1])
   fitted.model = garchFit(
     formula = ~ arma(3, 1) + garch(1, 2),
     data = data.series,
     cond.dist = "QMLE",
     trace = FALSE
   )
-  # Get current residuals
-  model.residuals  = fGarch::residuals(fitted.model , standardize = FALSE)  # TRUE
-  model.vol  = volatility(fitted.model)
+  # Get standardized residuals
+  model.residuals  = fGarch::residuals(fitted.model , standardize = TRUE)
   model.coef = coef(fitted.model)
-  cvol = model.vol[n]
-  cres = model.residuals[n]
-  ma1 = model.coef['ma1']
-  
-  model.ma = ma1 * cres # *cvol
-  
   # Predict next value
   model.forecast = fGarch::predict(object = fitted.model, n.ahead = 1)
-  model.mean = model.forecast$meanForecast #serie
-  model.sd = model.forecast$standardDeviation #volatility
-  
-  # get standardized residuals
-  est_sigma = fitted.model@sigma.t
-  stdres = data.series / est_sigma
-  #Fit gpd to residuals over threshold
+  model.mean = model.forecast$meanForecast # conditional mean
+  model.sd = model.forecast$standardDeviation # conditional volatility
+
+  # Fit gpd to residuals over threshold
   # Determine threshold
   
-  #prediction[count, 1] = date
-  #prediction[count, 2] = next.return
-  #prediction[count, 3] = return.sd
-  
-  prediction_i = c(date, next.return[1], return.sd[1])
-  
-  
-  #k = length(stdres) * (1 - q_fit)
-  
-  
-  #EVTmodel.threshold = quantile(stdres, 1 - q_fit)# (sort(stdres, decreasing = TRUE))[(k + 1)]
   EVTmodel.threshold = quantile(model.residuals, (1 - q_fit))
   
   # Fit GPD to residuals
@@ -91,26 +70,20 @@ fit_pred = function() {
                                                shape=EVTmodel.shape)
   
   # Calculate proba
-  if (model_type == "new"){
-    model.proba = pnorm(( lower[1] - model.mean - model.ma) / model.sd)
-    model.proba = 1 -  model.proba
-    EVTmodel.proba = pgpd(( lower[1] - model.mean - model.ma) / model.sd,
-                          loc = EVTmodel.threshold,
-                          scale = EVTmodel.scale,
-                          shape = EVTmodel.shape)
-    EVTmodel.proba = 1 - EVTmodel.proba
-  }
-  if (model_type == "or"){
-    model.proba = pnorm(( lower[1] - model.mean) / model.sd)
-    model.proba = 1 - model.proba
-    EVTmodel.proba = pgpd(( lower[1] - model.mean) / model.sd,
-                          loc = EVTmodel.threshold,
-                          scale = EVTmodel.scale,
-                          shape = EVTmodel.shape)
-    EVTmodel.proba = 1 - EVTmodel.proba
-  }
-    
-  q_data = c(EVTmodel.threshold, EVTmodel.var, EVTmodel.es,  EVTmodel.proba, 
+  model.proba = pnorm(( lower[1] - model.mean) / model.sd)
+  model.proba = 1 - model.proba
+  EVTmodel.proba = pgpd(( lower[1] - model.mean) / model.sd,
+                       loc = EVTmodel.threshold,
+                        scale = EVTmodel.scale,
+                        shape = EVTmodel.shape)
+  EVTmodel.proba = 1 - EVTmodel.proba
+  EVTmodel.proba.est = tail.gpd((lower[1] - model.mean) / model.sd,
+                                EVTmodel.threshold, 
+                                EVTmodel.scale, 
+                                EVTmodel.shape,
+                                n, 
+                                Nu)
+  q_data = c(EVTmodel.threshold, EVTmodel.var, EVTmodel.es,  EVTmodel.proba, EVTmodel.proba.est,
              model.var, model.es, model.proba, model.mean , model.sd, EVTmodel.zq)
   
   prediction_i = c(prediction_i, q_data)
@@ -148,7 +121,7 @@ dates = rownames(dataset)
 test_size = length.dataset - window_size
 
 qs = c(0.90)
-prediction = matrix(nrow = test_size, ncol = (3 + (10 * length(qs))))
+prediction = matrix(nrow = test_size, ncol = (3 + (11 * length(qs))))
 
 
 if (TEST){
@@ -205,6 +178,7 @@ for (q in qs){
          paste0("evt_var_", q),
          paste0("evt_es_", q),
          paste0("evt_proba_", q),
+         paste0("evt_proba_est_", q),
          paste0("var_", q),
          paste0("es_", q),
          paste0("proba_", q),
@@ -226,16 +200,14 @@ if (TEST){
   write.csv(df, paste0(
     paste0('./',
            save_path),
-    paste0(model_type, 
-           "_prediction_10per_proba_TEST.csv")
-  ),
+           "_prediction_10per_proba_TEST.csv"
+    ),
   row.names = TRUE)
 } else {
   write.csv(df, paste0(
     paste0('./saved_models/',
-           save_path),
-    paste0(model_type, 
-           "_prediction_qfit_02.csv")
-  ),
+           save_path), 
+           "_prediction_qfit_02.csv"
+    ),
   row.names = TRUE)
 }
