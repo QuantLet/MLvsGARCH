@@ -53,12 +53,14 @@ fit_pred = function() {
   
   
   #k = length(stdres) * (1 - q_fit)
-  k = length(stdres) * q_fit
-  EVTmodel.threshold = (sort(stdres, decreasing = TRUE))[(k + 1)]
-
+  
+  
+  #EVTmodel.threshold = quantile(stdres, 1 - q_fit)# (sort(stdres, decreasing = TRUE))[(k + 1)]
+  EVTmodel.threshold = quantile(model.residuals, (1 - q_fit))
+  
   # Fit GPD to residuals
   EVTmodel.fit = gpd.fit(
-    xdat = stdres,
+    xdat = model.residuals,
     threshold = EVTmodel.threshold,
     show = FALSE
   )
@@ -108,13 +110,6 @@ fit_pred = function() {
     EVTmodel.proba = 1 - EVTmodel.proba
   }
     
-  
-  
-  # print(c(model.proba, EVTmodel.proba))
-  # predicted_value = model.sd * EVTmodel.zq
-  #prediction[count, ((j-1) * 2 + 4)] = predicted_value_mean
-  #prediction[count, ((j-1) * 2 + 5)] = predicted_norm
-  
   q_data = c(EVTmodel.threshold, EVTmodel.var, EVTmodel.es,  EVTmodel.proba, 
              model.var, model.es, model.proba, model.mean , model.sd, EVTmodel.zq)
   
@@ -135,7 +130,7 @@ dataset <- timeSeries::as.timeSeries(dataset, FinCenter = "GMT")
 
 # Fit model on one month history
 window_size = 4 * month
-q_fit = 0.1  # fit to 10% of worst outcomes
+q_fit = 0.2  # fit to 10% of worst outcomes
 
 # Convert price series to losses and lower (negative) threshold to a positive threshold
 dataset = cbind(dataset, c(NaN, - diff(log(dataset$close))))
@@ -240,7 +235,7 @@ if (TEST){
     paste0('./saved_models/',
            save_path),
     paste0(model_type, 
-           "_prediction_10per_proba.csv")
+           "_prediction_qfit_02.csv")
   ),
   row.names = TRUE)
 }
