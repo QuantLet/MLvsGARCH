@@ -23,33 +23,52 @@
         "name": "ROCP",
         "params": {
           "timeperiod": 1
-        }
+        },
+        "scale": 1
       },
       {
         "name": "log_ROCP",
         "params": {
           "timeperiod": 1
-        }
+        },
+        "scale": 1
       },
       {
         "name": "ewm_price",
         "params": {
           "timeperiod": 10
-        }
+        },
+        "scale": 1
       },
       {
         "name": "ewm_ROCP",
         "params": {
           "rocp_timeperiod": 1,
           "ewm_timeperiod": 10
-        }
+        },
+        "scale": 1
       },
       {
         "name": "ewm_log_ROCP",
         "params": {
           "rocp_timeperiod": 1,
           "ewm_timeperiod": 10
-        }
+        },
+        "scale": 1
+      },
+      {
+        "name": "ewm_log_vol",
+        "params": {
+          "timeperiod": 24
+        },
+        "scale": 1
+      },
+      {
+        "name": "ewm_vol",
+        "params": {
+          "timeperiod": 24
+        },
+        "scale": 1
       }
     ],
     "n_classes": 3,
@@ -67,5 +86,30 @@
   "cv_param": {
     "cv_test_start": 0.7,
     "cv_split": 10
+  },
+  "model": [
+    {
+      "type": "LSTM",
+      "neurons": 4,
+      "params": {
+        "return_sequences": false,
+        "recurrent_dropout": 0.2
+      }
+    },
+    {
+      "type": "Dense",
+      "neurons": 2,
+      "params": {
+        "activation": "tanh"
+      }
+    },
+    {
+      "type": "softmax_output"
+    }
+  ],
+  "load_model": {
+    "path": "16092019-090635-normalization_w4months_input1day_multiple_ROCP_deep",
+    "epoch_number": 49,
+    "training": false
   }
 }
