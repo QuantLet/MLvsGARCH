@@ -13,7 +13,7 @@ from random import shuffle
 import pandas as pd
 import datetime as dt
 
-AVAILABLE_FEATURES = ['ROCP', 'log_ROCP', 'ewm_price', 'ewm_ROCP', 'ewm_log_ROCP']
+AVAILABLE_FEATURES = ['ROCP', 'log_ROCP', 'ewm_price', 'ewm_ROCP', 'ewm_log_ROCP', 'ewm_vol', 'ewm_log_vol']
 
 
 # data
@@ -54,7 +54,7 @@ def load_data(path='../data/btc_1H_20160101_20190101.csv', features=None, label=
     if features is not None:
         for feature in features:
             feature_name = feature['name']
-            assert feature_name in AVAILABLE_FEATURES
+            assert feature_name in AVAILABLE_FEATURES, '%s is not available. Available features are: %s' % (feature_name, AVAILABLE_FEATURES)
             if feature_name == 'ROCP':
                 dffeature = dfdata[['close']].pct_change(feature['params']['timeperiod'])
 
@@ -72,8 +72,16 @@ def load_data(path='../data/btc_1H_20160101_20190101.csv', features=None, label=
                 dffeature = np.log(dfdata[['close']].pct_change(feature['params']['rocp_timeperiod']) + 1)
                 dffeature = dffeature.ewm(span=feature['params']['ewm_timeperiod']).mean()
 
-            else:
-                print('%s is not available' % feature_name)
+            elif feature_name == 'ewm_vol':
+                dffeature = dfdata[['close']].pct_change()
+                dffeature = dffeature.ewm(span=feature['params']['timeperiod']).std()
+
+            elif feature_name == 'ewm_log_vol':
+                dffeature = np.log(dfdata[['close']].pct_change() + 1)
+                dffeature = dffeature.ewm(span=feature['params']['timeperiod']).std()
+
+            if 'scale' in feature.keys():
+                dffeature = dffeature * feature['scale']
 
             feature_name = feature_name + '_' + '_'.join('{}_{}'.format(*p) for p in feature['params'].items())
             dffeature.columns = [feature_name]
