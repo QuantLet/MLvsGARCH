@@ -12,6 +12,7 @@ from collections import Counter
 from random import shuffle
 import pandas as pd
 import datetime as dt
+from keras.regularizers import L1L2
 
 AVAILABLE_FEATURES = ['ROCP', 'log_ROCP', 'ewm_price', 'ewm_ROCP', 'ewm_log_ROCP', 'ewm_vol', 'ewm_log_vol']
 
@@ -341,13 +342,17 @@ class Model():
                 network = inputs
             layer_type = layer['type']
             name = layer_type + '_' + str(i)
+            if "regularizer" not in layer.keys():
+                layer["regularizer"] = {"l1":  0.0, "l2":  0.0}
             if layer_type == 'LSTM':
                 network = LSTM(layer['neurons'],
                                **layer['params'],
+                               recurrent_regularizer = L1L2(**layer['regularizer']),
                                name=name)(network)
             elif layer_type == 'Dense':
                 network = Dense(layer['neurons'],
                                 **layer['params'],
+                                kernel_regularizer = L1L2(**layer['regularizer']),
                                 name=name)(network)
             elif layer_type == 'softmax_output':
                 outputs = Dense(output_dim, activation="softmax", name="softmax_output")(network)
