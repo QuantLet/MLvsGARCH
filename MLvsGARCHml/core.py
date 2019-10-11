@@ -2,7 +2,7 @@ import pickle, matplotlib, math, keras, os, time
 import numpy as np
 
 np.random.seed(7)
-matplotlib.use('Agg')
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from keras.layers import Dense, Input, LSTM
 from keras.models import load_model
@@ -18,6 +18,17 @@ AVAILABLE_FEATURES = ['ROCP', 'log_ROCP', 'ewm_price', 'ewm_ROCP', 'ewm_log_ROCP
 
 
 # data
+def sync_simulation(min_=-10, max_=10, mean = 0, sigma = 1, W = 1, n = 1000):
+    X = np.linspace(min_, max_, n)
+    Y = np.linspace(min_, max_, n)
+    X = X + np.random.normal(mean, sigma, len(X))
+    Y = Y + np.random.normal(mean, sigma, len(X))
+    R = np.sqrt(X**2 + Y**2)+ np.finfo(float).eps#+
+    Z = np.sin(W*R)/(W*R)
+    dfdata = pd.DataFrame(np.array([X, Y, Z]).T, columns = ['X', 'Y', 'target'])
+    target = 'target'
+    return dfdata, target, ['X', 'Y']
+
 def load_data(path='../data/btc_1H_20160101_20190101.csv', features=None, label='labelPeakOverThreshold',
               **kwargs_label):
     """
@@ -312,7 +323,21 @@ class Timer():
 class Model():
     """A class for an building and inferencing an lstm model"""
 
-    def __init__(self, optimizer='adam', loss='categorical_crossentropy', model_dir=None):
+    def __init__(self, optimizer='adam', loss='categorical_crossentropy', model_dir=None, metrics = ['accuracy']):
+        self.metrics = metrics
+        if 'accuracy' in metrics:
+            met = 'acc'
+        elif 'mse' in metrics:
+            met = 'mean_squared_error'
+
+        self.met = met
+        self.history = {}
+        self.history['val_loss'] = []
+        self.history['val_' + met] = []
+        self.history['loss'] = []
+        self.history[met] = []
+
+
         self.loss = loss
         self.optimizer = optimizer
         if model_dir is None:
@@ -323,12 +348,6 @@ class Model():
 
         if not os.path.exists(self.model_dir):
             os.makedirs(self.model_dir)
-
-        self.history = {}
-        self.history['val_loss'] = []
-        self.history['val_acc'] = []
-        self.history['loss'] = []
-        self.history['acc'] = []
 
     def load_model(self):
         print('[Model] Loading model from file %s' % self.model_dir)
@@ -356,6 +375,8 @@ class Model():
                                 name=name)(network)
             elif layer_type == 'softmax_output':
                 outputs = Dense(output_dim, activation="softmax", name="softmax_output")(network)
+            elif layer_type == 'linear_output':
+                outputs = Dense(layer['neurons'], activation="linear", name="linear_output")(network)
 
         # tensor = LSTM(neurons, return_sequences=False, recurrent_dropout=0.2, name="lstm")(inputs)
         # tensor = Dense(2, activation="tanh", name="dense")(tensor)
@@ -374,12 +395,13 @@ class Model():
                         test_generator=None,
                         class_weight=None,
                         initial_epoch=0,
-                        use_multiprocessing=False, validation_steps=None):
+                        use_multiprocessing=False,
+                        validation_steps=None):
 
         self.model.compile(optimizer=self.optimizer,
                            loss=self.loss,
                            sample_weight_mode=None,
-                           metrics=['accuracy'],
+                           metrics=self.metrics,
                            )
         print('[Model] Model Compiled')
 
@@ -407,19 +429,20 @@ class Model():
             validation_data=test_generator,
             validation_steps=validation_steps
         )
+
         if 'val_loss' in hist.history:
             save_fname = model_dir + '/model_{}_val_loss={:.3f},val_acc={:.3f},loss={:.3f},acc={:.3f}.h5' \
                 .format(
                 initial_epoch + epochs - 1,
                 hist.history['val_loss'][-1],
-                hist.history['val_acc'][-1],
+                hist.history['val_' + self.met][-1],
                 hist.history['loss'][-1],
-                hist.history['acc'][-1]
+                hist.history[self.met][-1]
             )
             self.history['val_loss'].append(hist.history['val_loss'][-1])
-            self.history['val_acc'].append(hist.history['val_acc'][-1])
+            self.history['val_' + self.met].append(hist.history['val_acc'][-1])
             self.history['loss'].append(hist.history['loss'][-1])
-            self.history['acc'].append(hist.history['acc'][-1])
+            self.history[self.met].append(hist.history['acc'][-1])
 
         else:
             save_fname = model_dir + '/model_{}.h5' \
@@ -427,7 +450,7 @@ class Model():
                 initial_epoch
             )
             self.history['loss'].append(hist.history['loss'][-1])
-            self.history['acc'].append(hist.history['acc'][-1])
+            self.history[self.met].append(hist.history[self.met][-1])
 
         self.model.save(save_fname)
         pickle.dump(self.history, open('history.p', 'wb'))
@@ -487,25 +510,30 @@ class DataLoader():
             self.train_index = np.r_[0:(test_start + test_size * cv_split_i)]
 
         self.test_index = np.r_[self.train_index[-self.seq_len:], self.test_index]
-        self.train_index = self.train_index[: -lookfront]
+        if lookfront > 0:
+            self.train_index = self.train_index[: -lookfront]
 
         # normalization with sd estimated with moving average
-        mean = normalization['mean']
-        sigma = normalization['sigma']
-        n_ma = normalization['n_ma']
-        norm_nans = False
-        if mean is None:
-            norm_nans = True
-            mean = dfdata[self.feature_cols].rolling(n_ma).mean()
-            mean = mean.dropna()
-        if sigma is None:
-            norm_nans = True
-            sigma = (dfdata[self.feature_cols] ** 2).rolling(n_ma).mean() ** 0.5
-            sigma = sigma.dropna()
+        if normalization is not None:
+            mean = normalization['mean']
+            sigma = normalization['sigma']
+            n_ma = normalization['n_ma']
+            norm_nans = False
+            if mean is None:
+                norm_nans = True
+                mean = dfdata[self.feature_cols].rolling(n_ma).mean()
+                mean = mean.dropna()
+            if sigma is None:
+                norm_nans = True
+                sigma = (dfdata[self.feature_cols] ** 2).rolling(n_ma).mean() ** 0.5
+                sigma = sigma.dropna()
 
-        # If we performed normalization with moving average with now have NaNs at beginning of train set
-        if norm_nans:
-            self.train_index = self.train_index[n_ma - 1:]
+            # If we performed normalization with moving average with now have NaNs at beginning of train set
+            if norm_nans:
+                self.train_index = self.train_index[n_ma - 1:]
+        else:
+            mean = 0
+            sigma = 1
 
         self.train_index_time = dfdata.index[self.train_index]
         self.test_index_time = dfdata.index[self.test_index]
@@ -521,15 +549,14 @@ class DataLoader():
 
         self.class_weight = {}
         self.class_weight_count(class_weight)
-        print('class_weight', self.class_weight)
 
         self.max_lookback = 0
         self.n_classes = n_classes
 
         dfdata[self.feature_cols] -= mean
-        self.mean = mean
+        #self.mean = mean
         dfdata[self.feature_cols] /= sigma
-        self.sigma = sigma
+        #self.sigma = sigma
         self.dfdata_train[self.feature_cols] = dfdata.iloc[self.train_index][self.feature_cols]
         self.dfdata_test[self.feature_cols] = dfdata.iloc[self.test_index][self.feature_cols]
 
@@ -543,6 +570,8 @@ class DataLoader():
             print('LABELS:')
             for i in range(len(labels)):
                 print('{}: {:.2f}%'.format(labels[i], n_label[i] / np.sum(n_label) * 100))
+
+
         print('Training set from %s to %s' % (list(self.dfdata_train.index.astype(str))[0],
                                               list(self.dfdata_train.index.astype(str))[-1]))
 
@@ -691,6 +720,27 @@ class DataLoader():
             yield x_batch, y_batch
 
 
+def plot_history(model,  figure_dir, fig_name, legend=True):
+    plt.plot(model.history['loss'], label = 'loss')
+    plt.plot(model.history['val_loss'], label = 'val_loss')
+    if legend:
+        plt.legend(loc='lower right')
+
+    plt.savefig('{}/{}-Loss.png'.format(figure_dir, fig_name),
+                bbox_inches='tight')
+    plt.clf()
+
+    plt.plot(model.history[model.met], label = model.met)
+    plt.plot(model.history['val_' + model.met], label = 'val_' + model.met)
+
+    if legend:
+        plt.legend(loc='lower right')
+    plt.savefig('{}/{}-Metric.png'.format(figure_dir, fig_name),
+                bbox_inches='tight')
+    plt.clf()
+
+
+
 def plot_roc_curve(y_test, preds, figure_dir, fig_name, create_plot=True, legend=True, color='b', plot_type='roc',
                    class_i=1, label_append=''):
     # calculate the fpr and tpr for all thresholds of the classification
@@ -715,7 +765,14 @@ def plot_roc_curve(y_test, preds, figure_dir, fig_name, create_plot=True, legend
 
 
 def plot_performance(target, y_test, predictions, date_test, figure_dir, fig_name,
-                     data_loader, classification=True):
+                     data_loader, label, model = None):
+
+    classification = True
+    if label == "sinc":
+        simulation = True
+        classification = False
+
+
     results = data_loader.database.loc[date_test, [target]]
     results.columns = ['target']
 
@@ -726,10 +783,14 @@ def plot_performance(target, y_test, predictions, date_test, figure_dir, fig_nam
     else:
         results['prediction'] = predictions
 
-    for key in ['high', 'close', 'open', 'low']:
-        results[key] = data_loader.database.loc[date_test, [key]]
+    if not simulation:
+        for key in ['high', 'close', 'open', 'low']:
+            results[key] = data_loader.database.loc[date_test, [key]]
 
     results.to_pickle('{}/{}-prediction.pkl'.format(figure_dir, fig_name))
+
+    if model is not None:
+        plot_history(model, figure_dir, fig_name)
 
     if classification:
         if n_classes == 3:
@@ -766,7 +827,8 @@ def plot_performance(target, y_test, predictions, date_test, figure_dir, fig_nam
                                color=['b', 'r', 'g'][class_0], class_i=class_0, label_append=str(class_1))
 
 
-def train_predict(dfdata, target,  # data_path='../data/btc_1H_20160101_20190101.csv',
+def train_predict(dfdata,
+                  target,  # data_path='../data/btc_1H_20160101_20190101.csv',
                   model=None,
                   model_dir=None,
                   features=['ROCP'],
@@ -777,6 +839,7 @@ def train_predict(dfdata, target,  # data_path='../data/btc_1H_20160101_20190101
                   initial_epoch=0,
                   epochs=10,
                   loss_function='categorical_crossentropy',
+                  metrics = ['accuracy'],
                   class_weight=True,
                   input_timesteps=30,
                   n_classes=3,
@@ -792,7 +855,7 @@ def train_predict(dfdata, target,  # data_path='../data/btc_1H_20160101_20190101
     if model is None:
         # Create model
         m_dir = model_dir + '/' + str(cv_split_i)
-        model = Model(optimizer='adam', loss=loss_function, model_dir=m_dir)
+        model = Model(optimizer='adam', loss=loss_function, model_dir=m_dir, metrics = metrics)
         model.build_model(input_timesteps, len(features), n_classes, layers)
 
     # Create data generator for cross validation
@@ -805,6 +868,7 @@ def train_predict(dfdata, target,  # data_path='../data/btc_1H_20160101_20190101
         cweights = data.class_weight
     else:
         cweights = None
+
     # main training loop
     if training:
         steps_per_epoch = math.ceil(data.len_train / batch_size)
@@ -826,7 +890,6 @@ def train_predict(dfdata, target,  # data_path='../data/btc_1H_20160101_20190101
             class_weight=cweights
         )
         # Predict on corresponding validation set
-
         predictions, y, date = model.predict(data,
                                              input_timesteps=input_timesteps,
                                              n_classes=n_classes,

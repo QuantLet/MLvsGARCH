@@ -8,4 +8,8 @@ if "load_model" in config.keys():
 else:
     training = True
 
-run(config, classification=True, training=training)
+classification = True
+if config['label'] == "sinc":
+    classification = False
+
+run(config, classification=classification, training=training)
