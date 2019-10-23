@@ -1,4 +1,23 @@
 {
+  "label": "sinc",
+  "training_param": {
+    "loss_function": "mae",
+    "initial_epoch": 0,
+    "input_timesteps": 24,
+    "n_epochs": 50,
+    "batch_size": 128
+  },
+  "data_param": {
+    "type": "sinc_simulation",
+    "params": {
+      "min_": -100,
+      "max_": 100,
+      "n": 10000,
+      "W": 1,
+      "mean": 0,
+      "sigma": 1
+    }
+  },
   "label": "labelQuantile",
   "training_param": {
     "loss_function": "categorical_crossentropy",
