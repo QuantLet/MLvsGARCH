@@ -30,8 +30,51 @@ curve(dnorm(x, mean = mu, sd = sigma), add = TRUE, col = "darkblue",
       lwd = 2)
 # qq-plot
 par(pty="s") 
+d = (ret - mu)/ sigma
+plot(qnorm(seq(0,1, length.out=length(d))),
+     d[order(d)], xlim = c(-15,15), ylim = c(-15,15), main = NULL,
+     ylab = "Sample Quantiles", xlab = "Theoretical Quantiles")
+
+lines(qnorm(seq(0,1, length.out=length(d))), qnorm(seq(0,1, length.out=length(d))))
+lines(seq(-15,
+          qnorm(seq(0,1, length.out=length(d)))[2],
+          length.out=length(d)
+          ),
+      seq(-15,
+          qnorm(seq(0,1, length.out=length(d)))[2],
+          length.out=length(d)
+      ))
+      
+lines(seq(qnorm(seq(0,1, length.out=length(d)))[length(d) - 1],
+          15,
+          length.out=length(d)
+),
+seq(qnorm(seq(0,1, length.out=length(d)))[length(d) - 1],
+    15,
+    length.out=length(d)
+))
+
+
+par(pty="s") 
+d = (ret - mu)/ sigma
+plot(qnorm(seq(0,1, length.out=length(d))),
+     d[order(d)], xlim = c(-15,15), ylim = c(-15,15), main = NULL,
+     ylab = "Sample Quantiles", xlab = "Theoretical Quantiles")
+
+abline(coef = c(0,1))
+
+#lines(qnorm(seq(0,1, length.out=length(d))), qnorm(seq(0,1, length.out=length(d))))
+#lines(qnorm(seq(0,1, length.out=length(d))), qnorm(seq(0,1, length.out=length(d))))
+
+
+
+
+
 qqnorm((ret - mu)/ sigma, xlim = c(-15,15), ylim = c(-15,15), main = NULL)
-qqline((ret - mu)/ sigma)
+qqline((ret - mu)/ sigma, probs = c(0.01, 0.99))
+
+
+
 
 # Fit ARIMA model
 order = c(3, 0, 1) # arimaorder(fit)

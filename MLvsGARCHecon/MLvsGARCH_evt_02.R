@@ -101,7 +101,7 @@ dataset = data.frame("close" = dataset$close, "lower" = dataset$lower)
 rownames(dataset) = dates
 dataset <- timeSeries::as.timeSeries(dataset, FinCenter = "GMT")
 
-# Fit model on one month history
+# Fit model on 4 months history
 window_size = 4 * month
 q_fit = 0.2  # fit to 10% of worst outcomes
 
@@ -111,8 +111,8 @@ colnames(dataset) = c("close", "lower", "returns")
 dataset$lower = - dataset$lower
 
 # Forget about 2016
-dataset = dataset[rownames(dataset) >= '2018-08-01 00:00:00', c("returns", "lower")]
-dataset = dataset[rownames(dataset) <= '2018-12-04 00:00:00', c("returns", "lower")]
+dataset = dataset[rownames(dataset) >= '2017-01-01 00:00:00', c("returns", "lower")]
+# dataset = dataset[rownames(dataset) <= '2018-12-04 00:00:00', c("returns", "lower")]
 
 length.dataset = nrow(dataset)
 dates = rownames(dataset)
