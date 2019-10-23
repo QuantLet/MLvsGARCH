@@ -1,0 +1,134 @@
+{
+  "label": "sinc",
+  "training_param": {
+    "loss_function": "mae",
+    "initial_epoch": 0,
+    "input_timesteps": 24,
+    "n_epochs": 50,
+    "batch_size": 128
+  },
+  "data_param": {
+    "type": "sinc_simulation",
+    "params": {
+      "min_": -100,
+      "max_": 100,
+      "n": 10000,
+      "W": 1,
+      "mean": 0,
+      "sigma": 1
+    }
+  },
+  "label": "labelQuantile",
+  "training_param": {
+    "loss_function": "categorical_crossentropy",
+    "initial_epoch": 0,
+    "input_timesteps": 30,
+    "n_epochs": 20,
+    "batch_size": 128,
+    "class_weight": {
+      "0": 1,
+      "1": 1,
+      "2": 1
+    }
+  },
+  "data_param": {
+    "normalization": {
+      "n_ma": 1000,
+      "sigma": null,
+      "mean": 0
+    },
+    "features": [
+      {
+        "name": "ROCP",
+        "params": {
+          "timeperiod": 1
+        },
+        "scale": 1
+      },
+      {
+        "name": "log_ROCP",
+        "params": {
+          "timeperiod": 1
+        },
+        "scale": 1
+      },
+      {
+        "name": "ewm_price",
+        "params": {
+          "timeperiod": 10
+        },
+        "scale": 1
+      },
+      {
+        "name": "ewm_ROCP",
+        "params": {
+          "rocp_timeperiod": 1,
+          "ewm_timeperiod": 10
+        },
+        "scale": 1
+      },
+      {
+        "name": "ewm_log_ROCP",
+        "params": {
+          "rocp_timeperiod": 1,
+          "ewm_timeperiod": 10
+        },
+        "scale": 1
+      },
+      {
+        "name": "ewm_log_vol",
+        "params": {
+          "timeperiod": 24
+        },
+        "scale": 1
+      },
+      {
+        "name": "ewm_vol",
+        "params": {
+          "timeperiod": 24
+        },
+        "scale": 1
+      }
+    ],
+    "n_classes": 3,
+    "data_path": "../data/btc_1H_20160101_20190101.csv"
+  },
+  "comments": "test_features",
+  "label_param": {
+    "lq": 0.1,
+    "window": 2880,
+    "binary": false,
+    "uq": 0.9,
+    "lookfront": 1,
+    "log": true
+  },
+  "cv_param": {
+    "cv_test_start": 0.7,
+    "cv_split": 10
+  },
+  "model": [
+    {
+      "type": "LSTM",
+      "neurons": 4,
+      "params": {
+        "return_sequences": false,
+        "recurrent_dropout": 0.2
+      }
+    },
+    {
+      "type": "Dense",
+      "neurons": 2,
+      "params": {
+        "activation": "tanh"
+      }
+    },
+    {
+      "type": "softmax_output"
+    }
+  ],
+  "load_model": {
+    "path": "16092019-090635-normalization_w4months_input1day_multiple_ROCP_deep",
+    "epoch_number": 49,
+    "training": false
+  }
+}
