@@ -14,7 +14,8 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-# ![qlogo](http://quantnet.wiwi.hu-berlin.de/graphics/quantlogo.png) **[MLvsGARCHecon](MLvsGARCHecon)**
+# ![<img src="https://github.com/QuantLet/Styleguide-and-FAQ/blob/master/pictures/qloqo.png" alt="Visit QuantNet">](http://quantlet.de/) **[MLvsGARCHecon](MLvsGARCHecon)** [<img src="https://github.com/QuantLet/Styleguide-and-FAQ/blob/master/pictures/QN2.png" width="60" alt="Visit QuantNet 2.0">](http://quantlet.de/)
+
 
 In this repo, we first do a time series analysis of btc log returns in order to find the best parameter following Box-Jengins method *(ARIMA(3,0,1)-EskewtGARCH(1,2)*).
 
